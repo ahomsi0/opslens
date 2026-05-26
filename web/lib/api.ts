@@ -6,11 +6,21 @@ import type {
   ProjectSummary,
 } from "./types";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+// Client uses relative `/api/*` URLs — Vercel rewrites proxy them to the
+// backend, which keeps the session cookie same-origin (the only way
+// middleware can read it). Server-side fetches can't be relative, so we
+// use BACKEND_URL (server-only) for those and manually forward the cookie.
+const CLIENT_BASE = "";
+const SERVER_BASE =
+  process.env.BACKEND_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  "http://localhost:8080";
 
-// On the server (RSC), the session cookie isn't sent automatically — we
-// have to lift it from the incoming request via next/headers and forward
-// it as a Cookie header. On the client we just opt in to credentials.
+function urlFor(path: string): string {
+  if (typeof window === "undefined") return `${SERVER_BASE}${path}`;
+  return `${CLIENT_BASE}${path}`;
+}
+
 async function forwardedCookie(): Promise<string | undefined> {
   if (typeof window !== "undefined") return undefined;
   try {
@@ -25,7 +35,7 @@ async function forwardedCookie(): Promise<string | undefined> {
 
 async function get<T>(path: string, init?: RequestInit): Promise<T> {
   const cookie = await forwardedCookie();
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetch(urlFor(path), {
     ...init,
     headers: {
       Accept: "application/json",
@@ -102,7 +112,7 @@ export async function createConnection(input: {
   name: string;
   token: string;
 }): Promise<Connection> {
-  const res = await fetch(`${API_URL}/api/connections`, {
+  const res = await fetch(urlFor("/api/connections"), {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -123,7 +133,7 @@ export async function createConnection(input: {
 }
 
 export async function deleteConnection(id: string): Promise<void> {
-  const res = await fetch(`${API_URL}/api/connections/${id}`, {
+  const res = await fetch(urlFor(`/api/connections/${id}`), {
     method: "DELETE",
     credentials: "include",
     cache: "no-store",
@@ -134,7 +144,7 @@ export async function deleteConnection(id: string): Promise<void> {
 }
 
 export function apiUrl(path: string) {
-  return `${API_URL}${path}`;
+  return urlFor(path);
 }
 
 // --- AI ---
@@ -161,7 +171,7 @@ export async function* streamAIChat(
   messages: ChatMessage[],
   opts?: { projectId?: string; signal?: AbortSignal },
 ): AsyncGenerator<string, void, void> {
-  const res = await fetch(`${API_URL}/api/ai/chat`, {
+  const res = await fetch(urlFor("/api/ai/chat"), {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
