@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/ahomsi0/opslens/backend/internal/auth"
 	"github.com/ahomsi0/opslens/backend/internal/crypto"
 	"github.com/ahomsi0/opslens/backend/internal/db"
 	"github.com/ahomsi0/opslens/backend/internal/providers/docker"
@@ -35,7 +36,8 @@ type ConnectionAPI struct {
 }
 
 func (a *ConnectionAPI) List(w http.ResponseWriter, r *http.Request) {
-	conns, err := db.ListConnections(r.Context(), a.Pool, db.DefaultWorkspaceID)
+	userID := auth.MustUser(r.Context())
+	conns, err := db.ListConnections(r.Context(), a.Pool, userID)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
@@ -200,8 +202,9 @@ func (a *ConnectionAPI) Create(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, "encryption failed")
 		return
 	}
+	userID := auth.MustUser(r.Context())
 	conn, err := db.CreateConnection(r.Context(), a.Pool,
-		db.DefaultWorkspaceID, req.Provider, req.Name, accountLabel, enc)
+		userID, req.Provider, req.Name, accountLabel, enc)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
@@ -231,6 +234,20 @@ func (a *ConnectionAPI) Delete(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	userID := auth.MustUser(r.Context())
+	// Verify ownership before deleting. Quick row lookup beats an opaque 404.
+	var ownerID *uuid.UUID
+	err = a.Pool.QueryRow(r.Context(),
+		`SELECT user_id FROM provider_connections WHERE id = $1`, id,
+	).Scan(&ownerID)
+	if err != nil {
+		writeErr(w, http.StatusNotFound, "not found")
+		return
+	}
+	if ownerID == nil || *ownerID != userID {
+		writeErr(w, http.StatusForbidden, "not yours")
 		return
 	}
 	if err := db.DeleteConnection(r.Context(), a.Pool, id); err != nil {

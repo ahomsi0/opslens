@@ -75,7 +75,7 @@ export function LiveDashboardPreview() {
         <div className="p-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <span className="h-2 w-2 rounded-full bg-[oklch(0.78_0.16_155)] pulse-dot shadow-[0_0_0_4px_oklch(0.78_0.16_155/0.18)]" />
+              <span className="h-2 w-2 rounded-full bg-[oklch(0.78_0.16_155)] pulse-dot" />
               <div>
                 <div className="text-sm font-medium tracking-tight">
                   api-gateway

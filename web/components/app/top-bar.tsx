@@ -2,6 +2,8 @@
 
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { UserMenu } from "@/components/app/user-menu";
+import type { AuthUser } from "@/lib/auth";
 
 interface BreadcrumbItem {
   label: string;
@@ -11,14 +13,16 @@ interface BreadcrumbItem {
 export function TopBar({
   breadcrumbs = [],
   onCommand,
+  user,
 }: {
   breadcrumbs?: BreadcrumbItem[];
   onCommand?: () => void;
+  user: AuthUser | null;
 }) {
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-[var(--color-border)] glass px-5">
       <div className="flex items-center gap-3 min-w-0">
-        <WorkspaceBadge />
+        <WorkspaceBadge name={user?.name?.split(" ")[0] ?? "Workspace"} />
         {breadcrumbs.length > 0 && (
           <>
             <span className="text-[var(--color-fg-subtle)]">/</span>
@@ -29,9 +33,7 @@ export function TopBar({
                   className="text-sm text-[var(--color-fg-muted)] truncate"
                 >
                   {i > 0 && (
-                    <span className="mx-2 text-[var(--color-fg-subtle)]">
-                      /
-                    </span>
+                    <span className="mx-2 text-[var(--color-fg-subtle)]">/</span>
                   )}
                   {b.label}
                 </span>
@@ -55,18 +57,19 @@ export function TopBar({
             ⌘K
           </kbd>
         </Button>
+        <UserMenu user={user} />
       </div>
     </header>
   );
 }
 
-function WorkspaceBadge() {
+function WorkspaceBadge({ name }: { name: string }) {
   return (
     <span className="flex items-center gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-sm">
       <span className="flex h-5 w-5 items-center justify-center rounded bg-[var(--color-accent)] text-[10px] font-bold text-black">
-        P
+        {name[0]?.toUpperCase() || "O"}
       </span>
-      <span className="font-medium">Opslens</span>
+      <span className="font-medium truncate max-w-[140px]">{name}</span>
     </span>
   );
 }

@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/app/app-shell";
 import { IntegrationsList } from "@/components/integrations/integrations-list";
 import { fetchConnections, fetchProjects } from "@/lib/api";
+import { fetchMe } from "@/lib/auth";
 import type { Connection, ProjectSummary } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +10,7 @@ export default async function IntegrationsPage() {
   let projects: ProjectSummary[] = [];
   let connections: Connection[] = [];
   let error: string | null = null;
+  const user = await fetchMe();
   try {
     [projects, connections] = await Promise.all([
       fetchProjects(),
@@ -20,6 +22,7 @@ export default async function IntegrationsPage() {
 
   return (
     <AppShell
+      user={user}
       projects={projects}
       breadcrumbs={[{ label: "Integrations" }]}
     >

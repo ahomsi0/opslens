@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/ahomsi0/opslens/backend/internal/ai"
+	"github.com/ahomsi0/opslens/backend/internal/auth"
 )
 
 type AIAPI struct {
@@ -59,9 +60,10 @@ func (a *AIAPI) Chat(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	userID := auth.MustUser(r.Context())
 	ctxBuild, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
-	sys, err := ai.BuildSystemPrompt(ctxBuild, a.Pool, projectID)
+	sys, err := ai.BuildSystemPrompt(ctxBuild, a.Pool, userID, projectID)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "could not build context: "+err.Error())
 		return

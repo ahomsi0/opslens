@@ -10,19 +10,15 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// DefaultWorkspaceID is the placeholder workspace until we add real auth.
-// Stable UUID so the value is consistent across restarts.
-var DefaultWorkspaceID = uuid.MustParse("00000000-0000-0000-0000-000000000001")
-
 type Connection struct {
-	ID             uuid.UUID  `json:"id"`
-	WorkspaceID    uuid.UUID  `json:"workspaceId"`
-	Provider       string     `json:"provider"`
-	Name           string     `json:"name"`
-	AccountLabel   *string    `json:"accountLabel,omitempty"`
-	CreatedAt      time.Time  `json:"createdAt"`
-	LastSyncedAt   *time.Time `json:"lastSyncedAt,omitempty"`
-	LastError      *string    `json:"lastError,omitempty"`
+	ID           uuid.UUID  `json:"id"`
+	UserID       *uuid.UUID `json:"userId,omitempty"`
+	Provider     string     `json:"provider"`
+	Name         string     `json:"name"`
+	AccountLabel *string    `json:"accountLabel,omitempty"`
+	CreatedAt    time.Time  `json:"createdAt"`
+	LastSyncedAt *time.Time `json:"lastSyncedAt,omitempty"`
+	LastError    *string    `json:"lastError,omitempty"`
 }
 
 type ConnectionWithToken struct {
@@ -30,13 +26,13 @@ type ConnectionWithToken struct {
 	EncryptedToken []byte
 }
 
-func ListConnections(ctx context.Context, pool *pgxpool.Pool, workspaceID uuid.UUID) ([]Connection, error) {
+func ListConnections(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID) ([]Connection, error) {
 	rows, err := pool.Query(ctx, `
-		SELECT id, workspace_id, provider, name, account_label, created_at, last_synced_at, last_error
+		SELECT id, user_id, provider, name, account_label, created_at, last_synced_at, last_error
 		FROM provider_connections
-		WHERE workspace_id = $1
+		WHERE user_id = $1
 		ORDER BY created_at ASC
-	`, workspaceID)
+	`, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +40,7 @@ func ListConnections(ctx context.Context, pool *pgxpool.Pool, workspaceID uuid.U
 	out := make([]Connection, 0)
 	for rows.Next() {
 		var c Connection
-		if err := rows.Scan(&c.ID, &c.WorkspaceID, &c.Provider, &c.Name,
+		if err := rows.Scan(&c.ID, &c.UserID, &c.Provider, &c.Name,
 			&c.AccountLabel, &c.CreatedAt, &c.LastSyncedAt, &c.LastError); err != nil {
 			return nil, err
 		}
@@ -53,11 +49,14 @@ func ListConnections(ctx context.Context, pool *pgxpool.Pool, workspaceID uuid.U
 	return out, rows.Err()
 }
 
+// ListAllConnectionsWithTokens returns every connection across every user.
+// Used by the background poller.
 func ListAllConnectionsWithTokens(ctx context.Context, pool *pgxpool.Pool) ([]ConnectionWithToken, error) {
 	rows, err := pool.Query(ctx, `
-		SELECT id, workspace_id, provider, name, account_label, created_at,
+		SELECT id, user_id, provider, name, account_label, created_at,
 		       last_synced_at, last_error, encrypted_token
 		FROM provider_connections
+		WHERE user_id IS NOT NULL
 	`)
 	if err != nil {
 		return nil, err
@@ -66,7 +65,7 @@ func ListAllConnectionsWithTokens(ctx context.Context, pool *pgxpool.Pool) ([]Co
 	out := make([]ConnectionWithToken, 0)
 	for rows.Next() {
 		var c ConnectionWithToken
-		if err := rows.Scan(&c.ID, &c.WorkspaceID, &c.Provider, &c.Name,
+		if err := rows.Scan(&c.ID, &c.UserID, &c.Provider, &c.Name,
 			&c.AccountLabel, &c.CreatedAt, &c.LastSyncedAt, &c.LastError,
 			&c.EncryptedToken); err != nil {
 			return nil, err
@@ -90,21 +89,22 @@ func GetConnectionToken(ctx context.Context, pool *pgxpool.Pool, id uuid.UUID) (
 
 func CreateConnection(
 	ctx context.Context, pool *pgxpool.Pool,
-	workspaceID uuid.UUID, provider, name, accountLabel string, encryptedToken []byte,
+	userID uuid.UUID, provider, name, accountLabel string, encryptedToken []byte,
 ) (Connection, error) {
 	id := uuid.New()
 	now := time.Now().UTC()
 	_, err := pool.Exec(ctx, `
 		INSERT INTO provider_connections
-		    (id, workspace_id, provider, name, account_label, encrypted_token, created_at)
+		    (id, user_id, provider, name, account_label, encrypted_token, created_at)
 		VALUES ($1,$2,$3,$4,$5,$6,$7)
-	`, id, workspaceID, provider, name, accountLabel, encryptedToken, now)
+	`, id, userID, provider, name, accountLabel, encryptedToken, now)
 	if err != nil {
 		return Connection{}, err
 	}
 	label := accountLabel
+	u := userID
 	return Connection{
-		ID: id, WorkspaceID: workspaceID, Provider: provider,
+		ID: id, UserID: &u, Provider: provider,
 		Name: name, AccountLabel: &label, CreatedAt: now,
 	}, nil
 }

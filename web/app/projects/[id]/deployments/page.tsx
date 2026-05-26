@@ -4,6 +4,7 @@ import { ProjectHeader } from "@/components/projects/project-header";
 import { ProjectTabs } from "@/components/projects/project-tabs";
 import { DeploymentTimeline } from "@/components/projects/deployment-timeline";
 import { fetchDeployments, fetchProject, fetchProjects } from "@/lib/api";
+import { fetchMe } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -13,16 +14,18 @@ export default async function DeploymentsPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [data, deployments, allProjects] = await Promise.all([
+  const [data, deployments, allProjects, user] = await Promise.all([
     fetchProject(id),
     fetchDeployments(id),
     fetchProjects(),
+    fetchMe(),
   ]);
   if (!data) notFound();
   const { project } = data;
 
   return (
     <AppShell
+      user={user}
       projects={allProjects}
       breadcrumbs={[
         { label: "Projects" },

@@ -2,6 +2,7 @@ import { AppShell } from "@/components/app/app-shell";
 import { ProjectGrid } from "@/components/projects/project-grid";
 import { StatRow } from "@/components/projects/stat-row";
 import { fetchProjects } from "@/lib/api";
+import { fetchMe } from "@/lib/auth";
 import type { ProjectSummary } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage() {
   let projects: ProjectSummary[] = [];
   let error: string | null = null;
+  const user = await fetchMe();
   try {
     projects = await fetchProjects();
   } catch (e) {
@@ -16,7 +18,7 @@ export default async function DashboardPage() {
   }
 
   return (
-    <AppShell projects={projects} breadcrumbs={[{ label: "Dashboard" }]}>
+    <AppShell user={user} projects={projects} breadcrumbs={[{ label: "Dashboard" }]}>
       <div className="mx-auto max-w-7xl px-6 py-8">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Projects</h1>

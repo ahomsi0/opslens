@@ -8,7 +8,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/ahomsi0/opslens/backend/internal/auth"
+	"github.com/ahomsi0/opslens/backend/internal/db"
 	"github.com/ahomsi0/opslens/backend/internal/metrics"
 	"github.com/ahomsi0/opslens/backend/internal/models"
 )
@@ -20,14 +23,25 @@ var upgrader = websocket.Upgrader{
 }
 
 type Handler struct {
-	Hub *metrics.Hub
+	Hub  *metrics.Hub
+	Pool *pgxpool.Pool
 }
 
 func (h *Handler) MetricsWS(w http.ResponseWriter, r *http.Request) {
+	userID, ok := auth.UserFromContext(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
 	idStr := chi.URLParam(r, "id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
 		http.Error(w, "invalid project id", http.StatusBadRequest)
+		return
+	}
+	// Ownership check: can the user see this project?
+	if _, err := db.GetProjectForUser(r.Context(), h.Pool, userID, id); err != nil {
+		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
 	conn, err := upgrader.Upgrade(w, r, nil)

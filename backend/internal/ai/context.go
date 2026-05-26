@@ -18,8 +18,8 @@ import (
 // BuildSystemPrompt produces the system message for a chat request.
 // If projectID is non-zero, that project's recent deploys + error logs
 // are included as a focused detail block.
-func BuildSystemPrompt(ctx context.Context, pool *pgxpool.Pool, projectID uuid.UUID) (string, error) {
-	projects, err := db.ListProjects(ctx, pool)
+func BuildSystemPrompt(ctx context.Context, pool *pgxpool.Pool, userID, projectID uuid.UUID) (string, error) {
+	projects, err := db.ListProjectsForUser(ctx, pool, userID)
 	if err != nil {
 		return "", err
 	}

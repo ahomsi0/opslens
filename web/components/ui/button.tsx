@@ -11,7 +11,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-[var(--color-accent)] text-black hover:bg-[oklch(0.86_0.13_200)] glow-accent",
+          "bg-[var(--color-accent)] text-black hover:bg-[oklch(0.86_0.13_200)]",
         secondary:
           "bg-[var(--color-surface-2)] text-[var(--color-fg)] hover:bg-[var(--color-surface-3)] border border-[var(--color-border)]",
         outline:
@@ -19,7 +19,7 @@ const buttonVariants = cva(
         ghost:
           "text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] hover:bg-[var(--color-surface)]",
         destructive:
-          "bg-[var(--color-danger)] text-white hover:opacity-90 glow-danger",
+          "bg-[var(--color-danger)] text-white hover:opacity-90",
         link: "text-[var(--color-accent)] underline-offset-4 hover:underline",
       },
       size: {

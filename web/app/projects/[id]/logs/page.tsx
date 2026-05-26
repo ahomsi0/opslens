@@ -4,6 +4,7 @@ import { ProjectHeader } from "@/components/projects/project-header";
 import { ProjectTabs } from "@/components/projects/project-tabs";
 import { LogViewer } from "@/components/logs/log-viewer";
 import { fetchLogs, fetchProject, fetchProjects } from "@/lib/api";
+import { fetchMe } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -13,16 +14,18 @@ export default async function LogsPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [data, initialLogs, allProjects] = await Promise.all([
+  const [data, initialLogs, allProjects, user] = await Promise.all([
     fetchProject(id),
     fetchLogs(id, { limit: 200 }),
     fetchProjects(),
+    fetchMe(),
   ]);
   if (!data) notFound();
   const { project } = data;
 
   return (
     <AppShell
+      user={user}
       projects={allProjects}
       breadcrumbs={[
         { label: "Projects" },

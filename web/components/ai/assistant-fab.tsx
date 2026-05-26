@@ -15,7 +15,6 @@ export function AssistantFab({ onClick }: { onClick: () => void }) {
     >
       <span className="relative flex h-6 w-6 items-center justify-center rounded-full bg-[var(--color-accent-2)]">
         <Sparkles className="h-3 w-3 text-white" />
-        <span className="absolute inset-0 rounded-full ring-2 ring-[oklch(0.74_0.18_295/0.4)] pulse-dot" />
       </span>
       <span className="text-sm font-medium text-[var(--color-fg)]">
         Ask AI

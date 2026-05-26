@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/ahomsi0/opslens/backend/internal/auth"
 	"github.com/ahomsi0/opslens/backend/internal/db"
 	"github.com/ahomsi0/opslens/backend/internal/metrics"
 	"github.com/ahomsi0/opslens/backend/internal/models"
@@ -28,7 +29,8 @@ func (a *API) Health(w http.ResponseWriter, r *http.Request) {
 
 func (a *API) ListProjects(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	projects, err := db.ListProjects(ctx, a.Pool)
+	userID := auth.MustUser(ctx)
+	projects, err := db.ListProjectsForUser(ctx, a.Pool, userID)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
@@ -65,12 +67,13 @@ func (a *API) ListProjects(w http.ResponseWriter, r *http.Request) {
 
 func (a *API) GetProject(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	userID := auth.MustUser(ctx)
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "invalid id")
 		return
 	}
-	p, err := db.GetProject(ctx, a.Pool, id)
+	p, err := db.GetProjectForUser(ctx, a.Pool, userID, id)
 	if errors.Is(err, db.ErrNotFound) {
 		writeErr(w, http.StatusNotFound, "not found")
 		return
@@ -95,9 +98,15 @@ func (a *API) GetProject(w http.ResponseWriter, r *http.Request) {
 
 func (a *API) ListDeployments(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	userID := auth.MustUser(ctx)
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	// Ownership gate — same project visibility as GetProjectForUser.
+	if _, err := db.GetProjectForUser(ctx, a.Pool, userID, id); err != nil {
+		writeErr(w, http.StatusNotFound, "not found")
 		return
 	}
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
@@ -111,9 +120,14 @@ func (a *API) ListDeployments(w http.ResponseWriter, r *http.Request) {
 
 func (a *API) ListLogs(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	userID := auth.MustUser(ctx)
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	if _, err := db.GetProjectForUser(ctx, a.Pool, userID, id); err != nil {
+		writeErr(w, http.StatusNotFound, "not found")
 		return
 	}
 	q := r.URL.Query()

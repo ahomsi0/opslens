@@ -8,10 +8,31 @@ import type {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
+// On the server (RSC), the session cookie isn't sent automatically — we
+// have to lift it from the incoming request via next/headers and forward
+// it as a Cookie header. On the client we just opt in to credentials.
+async function forwardedCookie(): Promise<string | undefined> {
+  if (typeof window !== "undefined") return undefined;
+  try {
+    const mod = await import("next/headers");
+    const cookieStore = await mod.cookies();
+    const v = cookieStore.get("opslens_session")?.value;
+    return v ? `opslens_session=${v}` : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 async function get<T>(path: string, init?: RequestInit): Promise<T> {
+  const cookie = await forwardedCookie();
   const res = await fetch(`${API_URL}${path}`, {
     ...init,
-    headers: { Accept: "application/json", ...(init?.headers || {}) },
+    headers: {
+      Accept: "application/json",
+      ...(cookie ? { Cookie: cookie } : {}),
+      ...(init?.headers || {}),
+    },
+    credentials: "include",
     cache: "no-store",
   });
   if (!res.ok) {
@@ -83,6 +104,7 @@ export async function createConnection(input: {
 }): Promise<Connection> {
   const res = await fetch(`${API_URL}/api/connections`, {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
     cache: "no-store",
@@ -103,6 +125,7 @@ export async function createConnection(input: {
 export async function deleteConnection(id: string): Promise<void> {
   const res = await fetch(`${API_URL}/api/connections/${id}`, {
     method: "DELETE",
+    credentials: "include",
     cache: "no-store",
   });
   if (!res.ok && res.status !== 204) {
@@ -140,6 +163,7 @@ export async function* streamAIChat(
 ): AsyncGenerator<string, void, void> {
   const res = await fetch(`${API_URL}/api/ai/chat`, {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ messages, projectId: opts?.projectId }),
     signal: opts?.signal,

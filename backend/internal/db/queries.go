@@ -27,6 +27,39 @@ func scanProject(row interface {
 	return p, err
 }
 
+// projectsForUserCondition returns the SQL fragment + args that scopes
+// project queries to a given user: include rows whose connection belongs
+// to the user, plus orphan demo rows (connection_id IS NULL) which can
+// exist in self-hosted dev environments.
+func projectsForUserCondition(userID uuid.UUID) (string, []any) {
+	return `(connection_id IN (SELECT id FROM provider_connections WHERE user_id = $1) OR connection_id IS NULL)`, []any{userID}
+}
+
+func ListProjectsForUser(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID) ([]models.Project, error) {
+	where, args := projectsForUserCondition(userID)
+	rows, err := pool.Query(ctx, `
+		SELECT `+projectCols+`
+		FROM projects
+		WHERE `+where+`
+		ORDER BY (source = 'demo'), created_at ASC
+	`, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := make([]models.Project, 0)
+	for rows.Next() {
+		p, err := scanProject(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, p)
+	}
+	return out, rows.Err()
+}
+
+// ListProjects is the unscoped list. Only safe to call from background
+// jobs (poller, metric generator). API handlers should use ListProjectsForUser.
 func ListProjects(ctx context.Context, pool *pgxpool.Pool) ([]models.Project, error) {
 	rows, err := pool.Query(ctx, `
 		SELECT `+projectCols+`
@@ -46,6 +79,25 @@ func ListProjects(ctx context.Context, pool *pgxpool.Pool) ([]models.Project, er
 		out = append(out, p)
 	}
 	return out, rows.Err()
+}
+
+// GetProjectForUser returns the project only if it belongs to the user
+// (or is an orphan demo). Returns ErrNotFound otherwise — including when
+// the project exists but belongs to someone else.
+func GetProjectForUser(ctx context.Context, pool *pgxpool.Pool, userID, id uuid.UUID) (*models.Project, error) {
+	row := pool.QueryRow(ctx, `
+		SELECT `+projectCols+` FROM projects
+		WHERE id = $1
+		  AND (connection_id IN (SELECT id FROM provider_connections WHERE user_id = $2) OR connection_id IS NULL)
+	`, id, userID)
+	p, err := scanProject(row)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
 }
 
 func GetProject(ctx context.Context, pool *pgxpool.Pool, id uuid.UUID) (*models.Project, error) {

@@ -7,6 +7,7 @@ import { CommandPalette } from "./command-palette";
 import { AssistantPanel } from "@/components/ai/assistant-panel";
 import { AssistantFab } from "@/components/ai/assistant-fab";
 import type { ProjectSummary } from "@/lib/types";
+import type { AuthUser } from "@/lib/auth";
 
 interface BreadcrumbItem {
   label: string;
@@ -16,15 +17,16 @@ interface BreadcrumbItem {
 export function AppShell({
   children,
   projects,
+  user,
   breadcrumbs,
   assistantContext,
   assistantProjectId,
 }: {
   children: React.ReactNode;
   projects: ProjectSummary[];
+  user: AuthUser | null;
   breadcrumbs?: BreadcrumbItem[];
   assistantContext?: string;
-  /** When set, the AI assistant focuses its context on this project (more deploys, logs). */
   assistantProjectId?: string;
 }) {
   const [cmdOpen, setCmdOpen] = useState(false);
@@ -37,6 +39,7 @@ export function AppShell({
         <TopBar
           breadcrumbs={breadcrumbs}
           onCommand={() => setCmdOpen(true)}
+          user={user}
         />
         <main className="flex-1">{children}</main>
       </div>
