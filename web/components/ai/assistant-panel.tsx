@@ -335,16 +335,16 @@ function EmptyState({
 }) {
   return (
     <div>
-      <div className="rounded-xl border border-[oklch(0.65_0.22_350/0.3)] bg-[oklch(0.65_0.22_350/0.06)] p-4">
+      <div className="rounded-xl border border-[oklch(0.74_0.18_295/0.3)] bg-[oklch(0.74_0.18_295/0.06)] p-4">
         <div className="text-sm leading-relaxed">
-          <span className="text-[oklch(0.78_0.16_350)] font-semibold">
+          <span className="text-[oklch(0.85_0.14_295)] font-semibold">
             Hi — I&apos;m Opslens AI.
           </span>{" "}
           I have access to your projects, deploys, metrics, and logs. Ask me
           anything — I&apos;ll explain in plain English.
         </div>
         {context && (
-          <div className="mt-3 text-[11px] font-mono text-[var(--color-fg-muted)] border-t border-[oklch(0.65_0.22_350/0.2)] pt-3">
+          <div className="mt-3 text-[11px] font-mono text-[var(--color-fg-muted)] border-t border-[oklch(0.74_0.18_295/0.2)] pt-3">
             {context}
           </div>
         )}

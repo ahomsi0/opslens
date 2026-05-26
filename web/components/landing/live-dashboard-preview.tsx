@@ -128,13 +128,13 @@ export function LiveDashboardPreview() {
             <MiniChart samples={samples} />
           </div>
 
-          <div className="mt-4 rounded-lg border border-[oklch(0.65_0.22_350/0.35)] bg-[oklch(0.65_0.22_350/0.06)] p-3">
+          <div className="mt-4 rounded-lg border border-[oklch(0.74_0.18_295/0.35)] bg-[oklch(0.74_0.18_295/0.06)] p-3">
             <div className="flex items-start gap-2">
-              <div className="mt-0.5 flex h-5 w-5 items-center justify-center rounded-md bg-[oklch(0.65_0.22_350/0.2)] text-[oklch(0.78_0.16_350)]">
+              <div className="mt-0.5 flex h-5 w-5 items-center justify-center rounded-md bg-[oklch(0.74_0.18_295/0.2)] text-[oklch(0.85_0.14_295)]">
                 <Sparkle />
               </div>
               <div className="text-[12px] leading-relaxed text-[var(--color-fg)]">
-                <span className="text-[oklch(0.78_0.16_350)] font-medium">
+                <span className="text-[oklch(0.85_0.14_295)] font-medium">
                   Opslens AI:
                 </span>{" "}
                 Detected a 38% latency spike on{" "}
@@ -182,7 +182,7 @@ function MetricTile({
 }) {
   const colors = {
     cyan: "text-[oklch(0.78_0.13_200)]",
-    violet: "text-[oklch(0.78_0.16_350)]",
+    violet: "text-[oklch(0.85_0.14_295)]",
     emerald: "text-[oklch(0.85_0.14_155)]",
   };
   return (
@@ -293,7 +293,7 @@ function FloatingPills() {
           "rounded-full border border-[var(--color-border)] glass px-3 py-1.5 text-[11px] font-mono shadow-lg",
         )}
       >
-        <span className="text-[oklch(0.78_0.16_350)]">✨</span> AI insight ready
+        <span className="text-[oklch(0.85_0.14_295)]">✨</span> AI insight ready
       </motion.div>
     </>
   );

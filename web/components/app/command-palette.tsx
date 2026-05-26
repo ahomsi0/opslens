@@ -64,7 +64,7 @@ export function CommandPalette({
             {onAskAI && (
               <Command.Group heading="AI assistant" className="cmdk-group">
                 <CmdItem
-                  icon={<Sparkles className="h-4 w-4 text-[oklch(0.78_0.16_350)]" />}
+                  icon={<Sparkles className="h-4 w-4 text-[oklch(0.85_0.14_295)]" />}
                   label={
                     query
                       ? `Ask AI: “${query}”`
