@@ -1,0 +1,29 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# next
+web/.next/
+web/out/
+web/build/
+web/.turbo/
+
+# go
+backend/server
+backend/bin/
+*.test
+*.out
+
+# env
+.env
+.env.local
+.env*.local
+!.env.example
+
+# misc
+.DS_Store
+*.log
+.idea/
+.vscode/
+*.swp

@@ -1,0 +1,28 @@
+# Render Blueprint — provisions the Opslens Go backend as a Web Service.
+# Connect this repo to Render once, this file does the rest.
+#
+# After first deploy:
+#   1. In Render UI → Environment → set DATABASE_URL (from Neon)
+#   2. Set ENCRYPTION_KEY (any base64-encoded 32-byte string — see DEPLOYMENT.md)
+#   3. Set CORS_ORIGIN to your Vercel URL (e.g. https://opslens.vercel.app)
+#
+# Free plan note: the service spins down after 15 min of inactivity. First
+# request after a cold start takes ~30-60s. Upgrade to Starter ($7/mo) for
+# always-on once you're showing this off.
+
+services:
+  - type: web
+    name: opslens-api
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        sync: false # set in dashboard — Neon connection string
+      - key: ENCRYPTION_KEY
+        sync: false # set in dashboard — base64-encoded 32-byte key
+      - key: CORS_ORIGIN
+        sync: false # set in dashboard — your Vercel URL
