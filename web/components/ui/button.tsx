@@ -11,7 +11,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-[var(--color-accent)] text-black hover:bg-[oklch(0.86_0.13_200)]",
+          "bg-[var(--color-accent)] text-black hover:bg-[oklch(0.7_0.13_200)]",
         secondary:
           "bg-[var(--color-surface-2)] text-[var(--color-fg)] hover:bg-[var(--color-surface-3)] border border-[var(--color-border)]",
         outline:

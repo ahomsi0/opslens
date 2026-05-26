@@ -17,8 +17,8 @@ const levelStyles: Record<
   { dot: string; chip: string; row: string }
 > = {
   info: {
-    dot: "bg-[oklch(0.81_0.14_200)]",
-    chip: "text-[oklch(0.88_0.12_200)] border-[oklch(0.81_0.14_200/0.4)] bg-[oklch(0.81_0.14_200/0.08)]",
+    dot: "bg-[oklch(0.62_0.13_200)]",
+    chip: "text-[oklch(0.78_0.13_200)] border-[oklch(0.62_0.13_200/0.4)] bg-[oklch(0.62_0.13_200/0.08)]",
     row: "",
   },
   warn: {

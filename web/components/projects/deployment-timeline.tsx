@@ -31,7 +31,7 @@ const statusConfig: Record<
   },
   building: {
     label: "Building",
-    color: "text-[oklch(0.88_0.12_200)] border-[oklch(0.81_0.14_200/0.45)] bg-[oklch(0.81_0.14_200/0.1)]",
+    color: "text-[oklch(0.78_0.13_200)] border-[oklch(0.62_0.13_200/0.45)] bg-[oklch(0.62_0.13_200/0.1)]",
     icon: GitBranch,
   },
   canceled: {

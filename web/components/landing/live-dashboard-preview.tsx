@@ -181,7 +181,7 @@ function MetricTile({
   accent: "cyan" | "violet" | "emerald";
 }) {
   const colors = {
-    cyan: "text-[oklch(0.88_0.12_200)]",
+    cyan: "text-[oklch(0.78_0.13_200)]",
     violet: "text-[oklch(0.85_0.14_295)]",
     emerald: "text-[oklch(0.85_0.14_155)]",
   };

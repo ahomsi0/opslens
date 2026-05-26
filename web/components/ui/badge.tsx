@@ -16,7 +16,7 @@ const badgeVariants = cva(
         danger:
           "border-[oklch(0.69_0.22_25/0.5)] bg-[oklch(0.69_0.22_25/0.15)] text-[oklch(0.82_0.18_25)]",
         accent:
-          "border-[oklch(0.81_0.14_200/0.45)] bg-[oklch(0.81_0.14_200/0.12)] text-[oklch(0.88_0.12_200)]",
+          "border-[oklch(0.62_0.13_200/0.45)] bg-[oklch(0.62_0.13_200/0.12)] text-[oklch(0.78_0.13_200)]",
         violet:
           "border-[oklch(0.74_0.18_295/0.45)] bg-[oklch(0.74_0.18_295/0.12)] text-[oklch(0.85_0.14_295)]",
         outline:

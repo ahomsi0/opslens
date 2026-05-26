@@ -32,11 +32,11 @@ export default async function Image() {
           >
             <path
               d="M16 2.5 L27.5 9 L27.5 23 L16 29.5 L4.5 23 L4.5 9 Z"
-              stroke="#22D3EE"
+              stroke="#0891B2"
               strokeWidth="2"
               strokeLinejoin="round"
             />
-            <circle cx="16" cy="16" r="5.5" fill="#22D3EE" />
+            <circle cx="16" cy="16" r="5.5" fill="#0891B2" />
           </svg>
           <div
             style={{
@@ -61,7 +61,7 @@ export default async function Image() {
             }}
           >
             Production telemetry,{" "}
-            <span style={{ color: "#22D3EE" }}>explained by AI.</span>
+            <span style={{ color: "#0891B2" }}>explained by AI.</span>
           </div>
           <div
             style={{

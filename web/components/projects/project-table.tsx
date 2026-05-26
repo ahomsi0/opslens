@@ -391,7 +391,7 @@ function Chip({
       className={cn(
         "inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] font-medium transition capitalize",
         active
-          ? "border-[var(--color-accent)] bg-[oklch(0.81_0.14_200/0.1)] text-[var(--color-fg)]"
+          ? "border-[var(--color-accent)] bg-[oklch(0.62_0.13_200/0.1)] text-[var(--color-fg)]"
           : "border-[var(--color-border)] bg-transparent text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] hover:border-[var(--color-border-strong)]",
       )}
     >
