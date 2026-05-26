@@ -63,7 +63,7 @@ export function TopBar({
 function WorkspaceBadge() {
   return (
     <span className="flex items-center gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-sm">
-      <span className="flex h-5 w-5 items-center justify-center rounded bg-gradient-to-br from-[var(--color-accent)] to-[var(--color-accent-2)] text-[10px] font-bold text-black">
+      <span className="flex h-5 w-5 items-center justify-center rounded bg-[var(--color-accent)] text-[10px] font-bold text-black">
         P
       </span>
       <span className="font-medium">Opslens</span>

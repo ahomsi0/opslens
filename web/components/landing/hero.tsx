@@ -30,7 +30,9 @@ export function Hero() {
               className="mt-5 text-balance text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.05]"
             >
               Production telemetry,{" "}
-              <span className="gradient-text">explained by AI.</span>
+              <span className="text-[var(--color-accent)]">
+                explained by AI.
+              </span>
             </motion.h1>
 
             <motion.p
@@ -90,16 +92,32 @@ export function Hero() {
   );
 }
 
+// SVG-based grid pattern. Uses an SVG <pattern> instead of CSS
+// linear-gradient so the page is gradient-free.
 function BackgroundGrid() {
   return (
-    <div
+    <svg
       aria-hidden
-      className="pointer-events-none absolute inset-0 grid-fade-mask"
-      style={{
-        backgroundImage:
-          "linear-gradient(to right, oklch(0.295 0.018 260 / 0.4) 1px, transparent 1px), linear-gradient(to bottom, oklch(0.295 0.018 260 / 0.4) 1px, transparent 1px)",
-        backgroundSize: "56px 56px",
-      }}
-    />
+      className="pointer-events-none absolute inset-0 h-full w-full"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <defs>
+        <pattern
+          id="bg-grid"
+          width="56"
+          height="56"
+          patternUnits="userSpaceOnUse"
+        >
+          <path
+            d="M 56 0 L 0 0 0 56"
+            fill="none"
+            stroke="oklch(0.295 0.018 260)"
+            strokeWidth="1"
+            opacity="0.5"
+          />
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#bg-grid)" />
+    </svg>
   );
 }

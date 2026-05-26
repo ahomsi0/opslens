@@ -42,7 +42,6 @@ export function LiveChart({
   );
 
   const last = data[data.length - 1]?.value ?? 0;
-  const gradId = `grad-${String(dataKey)}-${label.replace(/\s+/g, "-")}`;
 
   return (
     <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 noise">
@@ -67,12 +66,6 @@ export function LiveChart({
             data={data}
             margin={{ top: 4, right: 6, left: 0, bottom: 0 }}
           >
-            <defs>
-              <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={color} stopOpacity={0.35} />
-                <stop offset="100%" stopColor={color} stopOpacity={0} />
-              </linearGradient>
-            </defs>
             <CartesianGrid
               stroke="var(--color-border)"
               strokeDasharray="3 4"
@@ -117,7 +110,8 @@ export function LiveChart({
               dataKey="value"
               stroke={color}
               strokeWidth={1.75}
-              fill={`url(#${gradId})`}
+              fill={color}
+              fillOpacity={0.12}
               isAnimationActive={false}
             />
           </AreaChart>

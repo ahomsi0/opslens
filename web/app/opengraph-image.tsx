@@ -12,8 +12,7 @@ export default async function Image() {
         style={{
           width: "100%",
           height: "100%",
-          background:
-            "radial-gradient(1100px 700px at 78% -8%, rgba(34,211,238,0.16), transparent 60%), radial-gradient(900px 600px at -8% 108%, rgba(167,139,250,0.18), transparent 60%), #0A0B0F",
+          background: "#0A0B0F",
           color: "#fafafa",
           display: "flex",
           flexDirection: "column",
@@ -31,20 +30,13 @@ export default async function Image() {
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
           >
-            <defs>
-              <linearGradient id="g" x1="4" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse">
-                <stop offset="0" stopColor="#22D3EE" />
-                <stop offset="1" stopColor="#A78BFA" />
-              </linearGradient>
-            </defs>
             <path
               d="M16 2.5 L27.5 9 L27.5 23 L16 29.5 L4.5 23 L4.5 9 Z"
-              stroke="url(#g)"
+              stroke="#22D3EE"
               strokeWidth="2"
               strokeLinejoin="round"
             />
-            <circle cx="16" cy="16" r="5.5" fill="url(#g)" />
-            <circle cx="13.5" cy="13.5" r="1.6" fill="white" fillOpacity="0.4" />
+            <circle cx="16" cy="16" r="5.5" fill="#22D3EE" />
           </svg>
           <div
             style={{
@@ -69,17 +61,7 @@ export default async function Image() {
             }}
           >
             Production telemetry,{" "}
-            <span
-              style={{
-                backgroundImage:
-                  "linear-gradient(90deg, #FAFAFA 0%, #22D3EE 55%, #A78BFA 100%)",
-                backgroundClip: "text",
-                WebkitBackgroundClip: "text",
-                color: "transparent",
-              }}
-            >
-              explained by AI.
-            </span>
+            <span style={{ color: "#22D3EE" }}>explained by AI.</span>
           </div>
           <div
             style={{

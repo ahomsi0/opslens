@@ -45,18 +45,7 @@
     text-rendering: optimizeLegibility;
   }
   body {
-    background-image:
-      radial-gradient(
-        1200px 800px at 80% -10%,
-        oklch(0.78 0.14 200 / 0.07),
-        transparent 60%
-      ),
-      radial-gradient(
-        900px 600px at -10% 100%,
-        oklch(0.74 0.18 295 / 0.06),
-        transparent 60%
-      );
-    background-attachment: fixed;
+    background: var(--color-bg);
   }
   ::selection {
     background: oklch(0.81 0.14 200 / 0.35);
@@ -104,9 +93,6 @@
     backdrop-filter: blur(24px) saturate(170%);
     -webkit-backdrop-filter: blur(24px) saturate(170%);
   }
-  .grid-fade-mask {
-    mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
-  }
   .text-balance {
     text-wrap: balance;
   }
@@ -129,16 +115,8 @@
       0 0 0 1px oklch(0.69 0.22 25 / 0.45),
       0 8px 24px -8px oklch(0.69 0.22 25 / 0.4);
   }
-  .gradient-text {
-    background: linear-gradient(
-      90deg,
-      var(--color-fg) 0%,
-      var(--color-accent) 50%,
-      var(--color-accent-2) 100%
-    );
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+  .accent-text {
+    color: var(--color-accent);
   }
   .noise {
     position: relative;
@@ -169,16 +147,10 @@
 }
 
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
 }
 .shimmer {
-  background: linear-gradient(
-    90deg,
-    var(--color-surface) 0%,
-    var(--color-surface-2) 50%,
-    var(--color-surface) 100%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.6s linear infinite;
+  background: var(--color-surface-2);
+  animation: shimmer 1.6s ease-in-out infinite;
 }

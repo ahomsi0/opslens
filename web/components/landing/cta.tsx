@@ -16,18 +16,12 @@ export function CTA() {
           transition={{ duration: 0.55 }}
           className="relative overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-10 sm:p-16 text-center"
         >
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0"
-            style={{
-              background:
-                "radial-gradient(closest-side at 30% 0%, oklch(0.81 0.14 200 / 0.18), transparent 70%), radial-gradient(closest-side at 80% 100%, oklch(0.74 0.18 295 / 0.18), transparent 70%)",
-            }}
-          />
           <div className="relative">
             <h2 className="text-balance text-3xl sm:text-5xl font-semibold tracking-tight">
               Production should{" "}
-              <span className="gradient-text">explain itself.</span>
+              <span className="text-[var(--color-accent)]">
+                explain itself.
+              </span>
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-[var(--color-fg-muted)]">
               Connect your first project and start streaming live metrics in

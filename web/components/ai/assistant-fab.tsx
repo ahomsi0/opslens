@@ -13,7 +13,7 @@ export function AssistantFab({ onClick }: { onClick: () => void }) {
       className="group fixed bottom-6 right-6 z-30 inline-flex items-center gap-2 rounded-full border border-[oklch(0.74_0.18_295/0.5)] glass-strong px-4 py-2.5 shadow-2xl hover:border-[oklch(0.74_0.18_295)] transition"
       aria-label="Open AI assistant"
     >
-      <span className="relative flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-[oklch(0.74_0.18_295)] to-[oklch(0.81_0.14_200)]">
+      <span className="relative flex h-6 w-6 items-center justify-center rounded-full bg-[var(--color-accent-2)]">
         <Sparkles className="h-3 w-3 text-white" />
         <span className="absolute inset-0 rounded-full ring-2 ring-[oklch(0.74_0.18_295/0.4)] pulse-dot" />
       </span>

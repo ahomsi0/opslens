@@ -29,9 +29,6 @@ export function MarketingNav() {
             <a href="#how" className="hover:text-[var(--color-fg)] transition">
               How it works
             </a>
-            <a href="#customers" className="hover:text-[var(--color-fg)] transition">
-              Customers
-            </a>
             <Link
               href="/dashboard"
               className="hover:text-[var(--color-fg)] transition"

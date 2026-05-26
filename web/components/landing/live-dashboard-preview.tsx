@@ -70,7 +70,6 @@ export function LiveDashboardPreview() {
 
   return (
     <div className="relative">
-      <Glow />
       <div className="relative rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl noise overflow-hidden">
         <FakeChrome />
         <div className="p-5">
@@ -219,13 +218,7 @@ function MiniChart({ samples }: { samples: Sample[] }) {
       preserveAspectRatio="none"
       aria-hidden
     >
-      <defs>
-        <linearGradient id="lat-grad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="oklch(0.81 0.14 200)" stopOpacity="0.35" />
-          <stop offset="1" stopColor="oklch(0.81 0.14 200)" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <path d={area} fill="url(#lat-grad)" />
+      <path d={area} fill="oklch(0.81 0.14 200)" fillOpacity="0.12" />
       <path
         d={path}
         fill="none"
@@ -274,18 +267,8 @@ function FakeChrome() {
   );
 }
 
-function Glow() {
-  return (
-    <div
-      aria-hidden
-      className="absolute -inset-8 -z-10"
-      style={{
-        background:
-          "radial-gradient(closest-side, oklch(0.81 0.14 200 / 0.18), transparent 70%), radial-gradient(closest-side at 80% 80%, oklch(0.74 0.18 295 / 0.16), transparent 70%)",
-      }}
-    />
-  );
-}
+// Glow removed — was a radial gradient. The card now relies on its border
+// and shadow alone for separation from the background.
 
 function FloatingPills() {
   return (
