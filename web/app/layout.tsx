@@ -1,16 +1,41 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://opslens-ah.vercel.app";
+
 export const metadata: Metadata = {
-  title: "Opslens — AI-native infrastructure monitoring",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "Opslens — AI-native infrastructure monitoring",
+    template: "%s · Opslens",
+  },
   description:
-    "Realtime deployment, infrastructure, and AI-powered incident insight for modern engineering teams.",
-  metadataBase: new URL("https://opslens.io"),
+    "Live deployment, infrastructure, and AI-powered incident insight for modern engineering teams. One dashboard for Vercel, Render, Railway, Supabase, Neon, and Docker.",
+  applicationName: "Opslens",
+  keywords: [
+    "infrastructure monitoring",
+    "deployment dashboard",
+    "AI observability",
+    "Vercel monitoring",
+    "Render monitoring",
+    "uptime",
+    "incidents",
+  ],
+  authors: [{ name: "Opslens" }],
   openGraph: {
-    title: "Opslens",
-    description:
-      "AI-native infrastructure monitoring built for modern dev teams.",
     type: "website",
+    siteName: "Opslens",
+    title: "Opslens — AI-native infrastructure monitoring",
+    description:
+      "Live deployment, infrastructure, and AI-powered incident insight for modern engineering teams.",
+    url: siteUrl,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Opslens — AI-native infrastructure monitoring",
+    description:
+      "Live deployment, infrastructure, and AI-powered incident insight for modern engineering teams.",
   },
 };
 
@@ -18,6 +43,7 @@ export const viewport: Viewport = {
   themeColor: "#0a0b0f",
   width: "device-width",
   initialScale: 1,
+  colorScheme: "dark",
 };
 
 export default function RootLayout({
