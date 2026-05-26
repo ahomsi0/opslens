@@ -74,6 +74,7 @@ func main() {
 	a := &api.API{Pool: pool, Hub: hub}
 	wsh := &ws.Handler{Hub: hub}
 	connAPI := &api.ConnectionAPI{Pool: pool, Sealer: sealer, Syncer: poller}
+	aiAPI := &api.AIAPI{Pool: pool}
 
 	r := chi.NewRouter()
 	r.Use(chimw.RequestID)
@@ -98,6 +99,9 @@ func main() {
 	r.Get("/api/connections", connAPI.List)
 	r.Post("/api/connections", connAPI.Create)
 	r.Delete("/api/connections/{id}", connAPI.Delete)
+
+	r.Get("/api/ai/config", aiAPI.Config)
+	r.Post("/api/ai/chat", aiAPI.Chat)
 
 	srv := &http.Server{
 		Addr:              ":" + port,

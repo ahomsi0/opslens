@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { pickResponse, promptSuggestions } from "./responses";
 import { cn } from "@/lib/utils";
+import { fetchAIConfig, streamAIChat, type ChatMessage } from "@/lib/api";
 
 interface Message {
   id: string;
@@ -19,16 +20,28 @@ export function AssistantPanel({
   open,
   onOpenChange,
   context,
+  projectId,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   context?: string;
+  projectId?: string;
 }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [aiEnabled, setAiEnabled] = useState<boolean | null>(null); // null = unknown, true/false = checked
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Check whether the backend has GROQ_API_KEY configured. Cached for the
+  // session — if the user adds the key on Render mid-session they can refresh.
+  useEffect(() => {
+    if (!open || aiEnabled !== null) return;
+    fetchAIConfig()
+      .then((c) => setAiEnabled(c.enabled))
+      .catch(() => setAiEnabled(false));
+  }, [open, aiEnabled]);
 
   useEffect(() => {
     if (open) {
@@ -51,10 +64,44 @@ export function AssistantPanel({
     return () => window.removeEventListener("keydown", handler);
   }, [open, onOpenChange]);
 
+  // Fake streaming for the canned fallback — same per-chunk pacing the
+  // real Groq stream tends to produce, so it doesn't feel like a downgrade.
+  const streamCanned = useCallback(
+    (assistantId: string, prompt: string): Promise<void> => {
+      return new Promise((resolve) => {
+        const full = pickResponse(prompt, context);
+        let i = 0;
+        const tick = () => {
+          const chunk = Math.max(3, Math.floor(Math.random() * 8));
+          i = Math.min(full.length, i + chunk);
+          setMessages((m) =>
+            m.map((msg) =>
+              msg.id === assistantId
+                ? {
+                    ...msg,
+                    content: full.slice(0, i),
+                    streaming: i < full.length,
+                  }
+                : msg,
+            ),
+          );
+          if (i < full.length) {
+            setTimeout(tick, 18 + Math.random() * 18);
+          } else {
+            resolve();
+          }
+        };
+        setTimeout(tick, 200);
+      });
+    },
+    [context],
+  );
+
   const send = useCallback(
     async (prompt: string) => {
       const trimmed = prompt.trim();
       if (!trimmed || busy) return;
+
       const userMsg: Message = {
         id: crypto.randomUUID(),
         role: "user",
@@ -67,36 +114,60 @@ export function AssistantPanel({
         content: "",
         streaming: true,
       };
+
+      // Snapshot prior conversation so we can pass it to the API.
+      const history: ChatMessage[] = messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+      history.push({ role: "user", content: trimmed });
+
       setMessages((m) => [...m, userMsg, draft]);
       setInput("");
       setBusy(true);
 
-      const full = pickResponse(trimmed, context);
-      // Stream character chunks
-      let i = 0;
-      const tick = () => {
-        const chunk = Math.max(3, Math.floor(Math.random() * 8));
-        i = Math.min(full.length, i + chunk);
+      const finish = () => {
         setMessages((m) =>
           m.map((msg) =>
-            msg.id === assistantId
-              ? {
-                  ...msg,
-                  content: full.slice(0, i),
-                  streaming: i < full.length,
-                }
-              : msg,
+            msg.id === assistantId ? { ...msg, streaming: false } : msg,
           ),
         );
-        if (i < full.length) {
-          setTimeout(tick, 18 + Math.random() * 18);
-        } else {
-          setBusy(false);
-        }
+        setBusy(false);
       };
-      setTimeout(tick, 250);
+
+      if (aiEnabled === false) {
+        await streamCanned(assistantId, trimmed);
+        finish();
+        return;
+      }
+
+      try {
+        let acc = "";
+        for await (const delta of streamAIChat(history, { projectId })) {
+          acc += delta;
+          setMessages((m) =>
+            m.map((msg) =>
+              msg.id === assistantId
+                ? { ...msg, content: acc, streaming: true }
+                : msg,
+            ),
+          );
+        }
+        finish();
+      } catch (err) {
+        // Backend unconfigured or error — gracefully fall back to canned.
+        console.warn("AI stream failed, falling back to canned:", err);
+        setAiEnabled(false);
+        setMessages((m) =>
+          m.map((msg) =>
+            msg.id === assistantId ? { ...msg, content: "" } : msg,
+          ),
+        );
+        await streamCanned(assistantId, trimmed);
+        finish();
+      }
     },
-    [busy, context],
+    [busy, aiEnabled, messages, projectId, streamCanned],
   );
 
   return (

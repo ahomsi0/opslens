@@ -28,6 +28,7 @@ export default async function ProjectDetailPage({
         { label: project.name },
       ]}
       assistantContext={`Currently viewing project "${project.name}" (${project.provider}, ${project.environment}). Status: ${project.status}.`}
+      assistantProjectId={project.id}
     >
       <div className="mx-auto max-w-7xl px-6 py-8">
         <ProjectHeader project={project} />

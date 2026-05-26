@@ -18,11 +18,14 @@ export function AppShell({
   projects,
   breadcrumbs,
   assistantContext,
+  assistantProjectId,
 }: {
   children: React.ReactNode;
   projects: ProjectSummary[];
   breadcrumbs?: BreadcrumbItem[];
   assistantContext?: string;
+  /** When set, the AI assistant focuses its context on this project (more deploys, logs). */
+  assistantProjectId?: string;
 }) {
   const [cmdOpen, setCmdOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
@@ -47,6 +50,7 @@ export function AppShell({
         open={aiOpen}
         onOpenChange={setAiOpen}
         context={assistantContext}
+        projectId={assistantProjectId}
       />
       <AssistantFab onClick={() => setAiOpen(true)} />
     </div>

@@ -30,6 +30,7 @@ export default async function LogsPage({
         { label: "Logs" },
       ]}
       assistantContext={`Viewing logs for project "${project.name}". Status: ${project.status}.`}
+      assistantProjectId={project.id}
     >
       <div className="mx-auto max-w-7xl px-6 py-8">
         <ProjectHeader project={project} />
