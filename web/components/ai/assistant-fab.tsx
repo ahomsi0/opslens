@@ -6,9 +6,9 @@ import { Sparkles } from "lucide-react";
 export function AssistantFab({ onClick }: { onClick: () => void }) {
   return (
     <motion.button
-      initial={{ opacity: 0, scale: 0.8 }}
+      initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay: 0.5, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: 0.15, ease: "easeOut" }}
       onClick={onClick}
       className="group fixed bottom-6 right-6 z-30 inline-flex items-center gap-2 rounded-full border border-[oklch(0.74_0.18_295/0.5)] glass-strong px-4 py-2.5 shadow-2xl hover:border-[oklch(0.74_0.18_295)] transition"
       aria-label="Open AI assistant"
