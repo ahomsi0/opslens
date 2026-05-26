@@ -272,7 +272,7 @@ export function AssistantPanel({
                 }}
                 className={cn(
                   "flex items-end gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-2",
-                  "focus-within:border-[var(--color-accent)]",
+                  "focus-within:border-[var(--color-accent-2)]",
                 )}
               >
                 <textarea
@@ -290,14 +290,14 @@ export function AssistantPanel({
                   className="flex-1 resize-none bg-transparent text-sm outline-none placeholder:text-[var(--color-fg-subtle)] py-1 px-1"
                   disabled={busy}
                 />
-                <Button
+                <button
                   type="submit"
-                  size="icon"
                   disabled={!input.trim() || busy}
                   aria-label="Send"
+                  className="inline-flex items-center justify-center h-9 w-9 rounded-md bg-[var(--color-accent-2)] text-white hover:opacity-90 transition disabled:opacity-50 disabled:pointer-events-none"
                 >
                   <ArrowUp className="h-4 w-4" />
-                </Button>
+                </button>
               </form>
               <div className="mt-2 flex items-center justify-between text-[10px] text-[var(--color-fg-subtle)]">
                 <span>
