@@ -90,10 +90,10 @@ export function CommandPalette({
               />
               <CmdItem
                 icon={<Boxes className="h-4 w-4" />}
-                label="All projects"
+                label="All projects (filterable list)"
                 onSelect={() => {
                   onOpenChange(false);
-                  router.push("/dashboard");
+                  router.push("/projects");
                 }}
               />
               {projects[0] && (
