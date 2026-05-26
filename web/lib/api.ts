@@ -11,10 +11,19 @@ import type {
 // middleware can read it). Server-side fetches can't be relative, so we
 // use BACKEND_URL (server-only) for those and manually forward the cookie.
 const CLIENT_BASE = "";
-const SERVER_BASE =
+
+function normalize(u: string): string {
+  return u
+    .trim() // strip whitespace (e.g. a space someone pasted by accident)
+    .replace(/\/+$/, "") // strip trailing slashes
+    .replace(/\/api$/, ""); // strip trailing /api so we can append /api/... cleanly
+}
+
+const SERVER_BASE = normalize(
   process.env.BACKEND_URL ||
-  process.env.NEXT_PUBLIC_API_URL ||
-  "http://localhost:8080";
+    process.env.NEXT_PUBLIC_API_URL ||
+    "http://localhost:8080",
+);
 
 function urlFor(path: string): string {
   if (typeof window === "undefined") return `${SERVER_BASE}${path}`;
