@@ -27,3 +27,6 @@ backend/bin/
 .idea/
 .vscode/
 *.swp
+
+# typescript incremental build cache
+*.tsbuildinfo
