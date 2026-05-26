@@ -3,7 +3,10 @@ package seed
 import (
 	"context"
 	"fmt"
+	"log"
 	"math/rand"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -88,7 +91,14 @@ var logTemplates = map[string][]string{
 	},
 }
 
+// IfEmpty seeds the demo dataset on first boot — but only if SEED_DEMO=true
+// is set in the environment. Default is off in production so a wipe stays
+// wiped; local development sets it to true in docker-compose / .env.
 func IfEmpty(ctx context.Context, pool *pgxpool.Pool) error {
+	if !seedEnabled() {
+		log.Printf("seed: SEED_DEMO not set, skipping demo seed")
+		return nil
+	}
 	var n int
 	if err := pool.QueryRow(ctx, `SELECT count(*) FROM projects`).Scan(&n); err != nil {
 		return err
@@ -96,7 +106,13 @@ func IfEmpty(ctx context.Context, pool *pgxpool.Pool) error {
 	if n > 0 {
 		return nil
 	}
+	log.Printf("seed: empty projects table + SEED_DEMO=true → inserting demo dataset")
 	return run(ctx, pool)
+}
+
+func seedEnabled() bool {
+	v := strings.ToLower(strings.TrimSpace(os.Getenv("SEED_DEMO")))
+	return v == "1" || v == "true" || v == "yes"
 }
 
 func run(ctx context.Context, pool *pgxpool.Pool) error {
