@@ -2,11 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { LogOut } from "lucide-react";
+import { LogOut, Moon, Sun } from "lucide-react";
 import { logout, type AuthUser } from "@/lib/auth";
+import { useTheme } from "@/components/theme/theme-provider";
 
 export function UserMenu({ user }: { user: AuthUser | null }) {
   const router = useRouter();
+  const { theme, toggle } = useTheme();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -62,6 +64,25 @@ export function UserMenu({ user }: { user: AuthUser | null }) {
               {user.email}
             </div>
           </div>
+          <button
+            role="menuitem"
+            onClick={() => {
+              toggle();
+            }}
+            className="flex w-full items-center justify-between gap-2 px-3 py-2 text-sm text-[var(--color-fg-muted)] hover:bg-[var(--color-bg-elevated)] hover:text-[var(--color-fg)] transition border-b border-[var(--color-border)]"
+          >
+            <span className="inline-flex items-center gap-2">
+              {theme === "dark" ? (
+                <Sun className="h-3.5 w-3.5" />
+              ) : (
+                <Moon className="h-3.5 w-3.5" />
+              )}
+              {theme === "dark" ? "Light mode" : "Dark mode"}
+            </span>
+            <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--color-fg-subtle)]">
+              {theme}
+            </span>
+          </button>
           <button
             role="menuitem"
             onClick={onSignOut}

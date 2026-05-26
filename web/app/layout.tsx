@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { ThemeProvider, themeInitScript } from "@/components/theme/theme-provider";
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://opslens-ah.vercel.app";
@@ -40,10 +41,8 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0a0b0f",
   width: "device-width",
   initialScale: 1,
-  colorScheme: "dark",
 };
 
 export default function RootLayout({
@@ -52,8 +51,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        {/* No-FOUC: set data-theme before first paint based on localStorage. */}
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <link
           rel="preconnect"
           href="https://rsms.me/"
@@ -65,7 +66,9 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-screen antialiased">{children}</body>
+      <body className="min-h-screen antialiased">
+        <ThemeProvider>{children}</ThemeProvider>
+      </body>
     </html>
   );
 }
