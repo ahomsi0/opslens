@@ -16,6 +16,7 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/ahomsi0/opslens/backend/internal/ai"
 	"github.com/ahomsi0/opslens/backend/internal/api"
 	"github.com/ahomsi0/opslens/backend/internal/auth"
 	"github.com/ahomsi0/opslens/backend/internal/crypto"
@@ -75,7 +76,7 @@ func main() {
 	a := &api.API{Pool: pool, Hub: hub}
 	wsh := &ws.Handler{Hub: hub, Pool: pool}
 	connAPI := &api.ConnectionAPI{Pool: pool, Sealer: sealer, Syncer: poller}
-	aiAPI := &api.AIAPI{Pool: pool}
+	aiAPI := &api.AIAPI{Pool: pool, Limits: ai.DefaultLimits()}
 	dockerAPI := &api.DockerAPI{Pool: pool, Sealer: sealer}
 	authAPI := &api.AuthAPI{Pool: pool}
 
@@ -120,6 +121,7 @@ func main() {
 		r.Delete("/api/connections/{id}", connAPI.Delete)
 
 		r.Get("/api/ai/config", aiAPI.Config)
+		r.Get("/api/ai/quota", aiAPI.Quota)
 		r.Post("/api/ai/chat", aiAPI.Chat)
 	})
 

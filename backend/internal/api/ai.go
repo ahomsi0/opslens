@@ -16,7 +16,8 @@ import (
 )
 
 type AIAPI struct {
-	Pool *pgxpool.Pool
+	Pool   *pgxpool.Pool
+	Limits ai.Limits
 }
 
 // Config tells the frontend whether to call /api/ai/chat or fall back
@@ -24,7 +25,19 @@ type AIAPI struct {
 func (a *AIAPI) Config(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
 		"enabled": ai.Configured(),
+		"limits":  a.Limits,
 	})
+}
+
+// Quota — current user's usage and what's left for the day.
+func (a *AIAPI) Quota(w http.ResponseWriter, r *http.Request) {
+	userID := auth.MustUser(r.Context())
+	usage, err := ai.GetUsage(r.Context(), a.Pool, userID, a.Limits)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, usage)
 }
 
 type chatReq struct {
@@ -34,6 +47,9 @@ type chatReq struct {
 
 // Chat streams a Groq completion back over SSE. Each event is a JSON
 // payload `{"delta": "..."}` plus a terminating `{"done": true}`.
+//
+// Rate-limited per-user (per minute + per day) and globally (per day)
+// before any token is sent to Groq.
 func (a *AIAPI) Chat(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
@@ -52,6 +68,23 @@ func (a *AIAPI) Chat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	userID := auth.MustUser(r.Context())
+
+	// Cap check — message length + the three rate limits. Reject with 429
+	// before we open a Groq stream.
+	totalPromptChars := 0
+	for _, m := range req.Messages {
+		totalPromptChars += len(m.Content)
+	}
+	if err := ai.CheckAllowed(r.Context(), a.Pool, userID, a.Limits, totalPromptChars); err != nil {
+		status := http.StatusTooManyRequests
+		if errors.Is(err, ai.ErrPromptTooLong) {
+			status = http.StatusRequestEntityTooLarge
+		}
+		writeErr(w, status, err.Error())
+		return
+	}
+
 	// Build the focus-aware system prompt from real DB state.
 	var projectID uuid.UUID
 	if req.ProjectID != "" {
@@ -60,7 +93,6 @@ func (a *AIAPI) Chat(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	userID := auth.MustUser(r.Context())
 	ctxBuild, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 	sys, err := ai.BuildSystemPrompt(ctxBuild, a.Pool, userID, projectID)
@@ -84,7 +116,6 @@ func (a *AIAPI) Chat(w http.ResponseWriter, r *http.Request) {
 
 	flusher, _ := w.(http.Flusher)
 	if flusher == nil {
-		// Shouldn't happen in net/http, but bail clean if it does.
 		http.Error(w, "streaming unsupported", http.StatusInternalServerError)
 		return
 	}
@@ -93,7 +124,6 @@ func (a *AIAPI) Chat(w http.ResponseWriter, r *http.Request) {
 	streamCtx, streamCancel := context.WithCancel(r.Context())
 	defer streamCancel()
 
-	// Run Groq in a goroutine so we can fan-in to the SSE writer.
 	errCh := make(chan error, 1)
 	go func() {
 		defer close(deltas)
@@ -109,17 +139,33 @@ func (a *AIAPI) Chat(w http.ResponseWriter, r *http.Request) {
 		return true
 	}
 
+	completionChars := 0
 	for delta := range deltas {
+		completionChars += len(delta)
 		if !writeEvent(map[string]string{"delta": delta}) {
 			return
 		}
 	}
 
-	if err := <-errCh; err != nil {
-		if errors.Is(err, context.Canceled) {
+	streamErr := <-errCh
+
+	// Record the query whether it succeeded or not, so quota counts cover
+	// failed (but billed) requests too. Best-effort: errors here are ignored.
+	go func() {
+		bg, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		errMsg := ""
+		if streamErr != nil && !errors.Is(streamErr, context.Canceled) {
+			errMsg = streamErr.Error()
+		}
+		ai.RecordQuery(bg, a.Pool, userID, totalPromptChars, completionChars, errMsg)
+	}()
+
+	if streamErr != nil {
+		if errors.Is(streamErr, context.Canceled) {
 			return
 		}
-		writeEvent(map[string]string{"error": err.Error()})
+		writeEvent(map[string]string{"error": streamErr.Error()})
 		return
 	}
 	writeEvent(map[string]bool{"done": true})

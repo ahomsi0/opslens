@@ -163,11 +163,39 @@ export interface ChatMessage {
   content: string;
 }
 
-export async function fetchAIConfig(): Promise<{ enabled: boolean }> {
+export interface AILimits {
+  perUserPerMinute: number;
+  perUserPerDay: number;
+  globalPerDay: number;
+  maxPromptChars: number;
+}
+
+export interface AIConfig {
+  enabled: boolean;
+  limits?: AILimits;
+}
+
+export interface AIUsage {
+  limits: AILimits;
+  usedTodayUser: number;
+  usedThisMinute: number;
+  usedTodayGlobal: number;
+  remainingToday: number;
+}
+
+export async function fetchAIConfig(): Promise<AIConfig> {
   try {
-    return await get<{ enabled: boolean }>(`/api/ai/config`);
+    return await get<AIConfig>(`/api/ai/config`);
   } catch {
     return { enabled: false };
+  }
+}
+
+export async function fetchAIUsage(): Promise<AIUsage | null> {
+  try {
+    return await get<AIUsage>(`/api/ai/quota`);
+  } catch {
+    return null;
   }
 }
 

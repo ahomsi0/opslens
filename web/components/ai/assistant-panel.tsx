@@ -7,7 +7,13 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { pickResponse, promptSuggestions } from "./responses";
 import { cn } from "@/lib/utils";
-import { fetchAIConfig, streamAIChat, type ChatMessage } from "@/lib/api";
+import {
+  fetchAIConfig,
+  fetchAIUsage,
+  streamAIChat,
+  type AIUsage,
+  type ChatMessage,
+} from "@/lib/api";
 
 interface Message {
   id: string;
@@ -31,17 +37,28 @@ export function AssistantPanel({
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [aiEnabled, setAiEnabled] = useState<boolean | null>(null); // null = unknown, true/false = checked
+  const [usage, setUsage] = useState<AIUsage | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Check whether the backend has GROQ_API_KEY configured. Cached for the
-  // session — if the user adds the key on Render mid-session they can refresh.
+  // Check whether the backend has GROQ_API_KEY configured + load current usage.
   useEffect(() => {
     if (!open || aiEnabled !== null) return;
     fetchAIConfig()
-      .then((c) => setAiEnabled(c.enabled))
+      .then((c) => {
+        setAiEnabled(c.enabled);
+        if (c.enabled) {
+          fetchAIUsage().then((u) => u && setUsage(u));
+        }
+      })
       .catch(() => setAiEnabled(false));
   }, [open, aiEnabled]);
+
+  const refreshUsage = useCallback(async () => {
+    if (!aiEnabled) return;
+    const u = await fetchAIUsage();
+    if (u) setUsage(u);
+  }, [aiEnabled]);
 
   useEffect(() => {
     if (open) {
@@ -154,20 +171,41 @@ export function AssistantPanel({
           );
         }
         finish();
+        refreshUsage();
       } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        const isQuotaError = /quota|minute|exceeds|too many|max/i.test(msg);
+        if (isQuotaError) {
+          // Show the rate-limit message as the assistant reply — don't burn
+          // the canned fallback for what's actually a "wait a sec" signal.
+          setMessages((m) =>
+            m.map((msg2) =>
+              msg2.id === assistantId
+                ? {
+                    ...msg2,
+                    content: `**You've hit a rate limit.** ${msg}\n\nTry again in a minute, or tomorrow if it's the daily cap.`,
+                    streaming: false,
+                  }
+                : msg2,
+            ),
+          );
+          setBusy(false);
+          refreshUsage();
+          return;
+        }
         // Backend unconfigured or error — gracefully fall back to canned.
         console.warn("AI stream failed, falling back to canned:", err);
         setAiEnabled(false);
         setMessages((m) =>
-          m.map((msg) =>
-            msg.id === assistantId ? { ...msg, content: "" } : msg,
+          m.map((msg2) =>
+            msg2.id === assistantId ? { ...msg2, content: "" } : msg2,
           ),
         );
         await streamCanned(assistantId, trimmed);
         finish();
       }
     },
-    [busy, aiEnabled, messages, projectId, streamCanned],
+    [busy, aiEnabled, messages, projectId, streamCanned, refreshUsage],
   );
 
   return (
@@ -261,9 +299,25 @@ export function AssistantPanel({
                   <ArrowUp className="h-4 w-4" />
                 </Button>
               </form>
-              <p className="mt-2 text-[10px] text-[var(--color-fg-subtle)] text-center">
-                Responses are illustrative previews in this build.
-              </p>
+              <div className="mt-2 flex items-center justify-between text-[10px] text-[var(--color-fg-subtle)]">
+                <span>
+                  {aiEnabled
+                    ? "Powered by Groq · Llama 3.3"
+                    : "Canned preview responses"}
+                </span>
+                {aiEnabled && usage && (
+                  <span
+                    className={
+                      usage.remainingToday <= 3
+                        ? "text-[oklch(0.88_0.14_80)]"
+                        : ""
+                    }
+                    title={`${usage.usedTodayUser} of ${usage.limits.perUserPerDay} used today · ${usage.usedThisMinute} of ${usage.limits.perUserPerMinute} this minute`}
+                  >
+                    {usage.remainingToday} / {usage.limits.perUserPerDay} left today
+                  </span>
+                )}
+              </div>
             </div>
           </motion.aside>
         </>
