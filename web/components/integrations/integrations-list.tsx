@@ -8,6 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { ProviderIcon, providerLabels } from "@/components/projects/provider-icon";
 import { ConnectVercelDialog } from "./connect-vercel-dialog";
 import { ConnectRenderDialog } from "./connect-render-dialog";
+import { ConnectNeonDialog } from "./connect-neon-dialog";
+import { ConnectSupabaseDialog } from "./connect-supabase-dialog";
+import { ConnectRailwayDialog } from "./connect-railway-dialog";
+import { ConnectDockerDialog } from "./connect-docker-dialog";
 import { deleteConnection } from "@/lib/api";
 import { timeAgo } from "@/lib/format";
 import type { Connection, Provider } from "@/lib/types";
@@ -15,7 +19,6 @@ import type { Connection, Provider } from "@/lib/types";
 interface ProviderInfo {
   provider: Provider;
   description: string;
-  status: "available" | "coming-soon";
 }
 
 const catalog: ProviderInfo[] = [
@@ -23,34 +26,31 @@ const catalog: ProviderInfo[] = [
     provider: "vercel",
     description:
       "Pull your Vercel projects, recent deployments, and commit history. Re-syncs every 30 seconds.",
-    status: "available",
   },
   {
     provider: "render",
     description:
       "Pull your Render services, their live URLs, and recent deploys. Re-syncs every 30 seconds.",
-    status: "available",
   },
   {
     provider: "railway",
-    description: "Services and deploy history from Railway via GraphQL.",
-    status: "coming-soon",
+    description:
+      "Pull every service across your Railway projects with each service's recent deploys, statuses, and commits.",
   },
   {
     provider: "neon",
-    description: "Project + branch info, connection health from Neon.",
-    status: "coming-soon",
+    description:
+      "Pull your Postgres projects from Neon — name, region, version. No deployment history (Neon is a managed database).",
   },
   {
     provider: "supabase",
-    description: "Project status and function logs from Supabase.",
-    status: "coming-soon",
+    description:
+      "Pull projects from the Supabase Management API: name, region, health status. No deployment history.",
   },
   {
     provider: "docker",
     description:
-      "Self-hosted: requires a small agent on your Docker host. Coming soon.",
-    status: "coming-soon",
+      "Self-hosted. Run a small heartbeat agent on your Docker host that reports container state every 30s — we mint the token here.",
   },
 ];
 
@@ -59,8 +59,7 @@ export function IntegrationsList({
 }: {
   connections: Connection[];
 }) {
-  const [vercelOpen, setVercelOpen] = useState(false);
-  const [renderOpen, setRenderOpen] = useState(false);
+  const [openDialog, setOpenDialog] = useState<Provider | null>(null);
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
@@ -99,16 +98,17 @@ export function IntegrationsList({
                     <h3 className="text-sm font-semibold tracking-tight">
                       {providerLabels[p.provider]}
                     </h3>
-                    {hasAny ? (
+                    {hasAny && (
                       <Badge variant="success" className="font-mono uppercase text-[10px] tracking-wider">
                         <CheckCircle2 className="h-3 w-3" />
                         Connected
                       </Badge>
-                    ) : p.status === "coming-soon" ? (
+                    )}
+                    {p.provider === "docker" && !hasAny && (
                       <Badge variant="outline" className="font-mono uppercase text-[10px] tracking-wider">
-                        Coming soon
+                        Agent-based
                       </Badge>
-                    ) : null}
+                    )}
                   </div>
                   <p className="mt-1 text-xs text-[var(--color-fg-muted)] leading-relaxed">
                     {p.description}
@@ -116,33 +116,15 @@ export function IntegrationsList({
                 </div>
               </div>
               <div className="shrink-0">
-                {p.provider === "vercel" && (
-                  <Button
-                    size="sm"
-                    variant={hasAny ? "outline" : "default"}
-                    onClick={() => setVercelOpen(true)}
-                    className="gap-1.5"
-                  >
-                    <Plug className="h-3.5 w-3.5" />
-                    {hasAny ? "Add another" : "Connect"}
-                  </Button>
-                )}
-                {p.provider === "render" && (
-                  <Button
-                    size="sm"
-                    variant={hasAny ? "outline" : "default"}
-                    onClick={() => setRenderOpen(true)}
-                    className="gap-1.5"
-                  >
-                    <Plug className="h-3.5 w-3.5" />
-                    {hasAny ? "Add another" : "Connect"}
-                  </Button>
-                )}
-                {p.status === "coming-soon" && (
-                  <Button size="sm" variant="outline" disabled>
-                    Coming soon
-                  </Button>
-                )}
+                <Button
+                  size="sm"
+                  variant={hasAny ? "outline" : "default"}
+                  onClick={() => setOpenDialog(p.provider)}
+                  className="gap-1.5"
+                >
+                  <Plug className="h-3.5 w-3.5" />
+                  {hasAny ? "Add another" : "Connect"}
+                </Button>
               </div>
             </div>
 
@@ -165,7 +147,9 @@ export function IntegrationsList({
                       <span className="text-[var(--color-fg-subtle)]">
                         {c.lastSyncedAt
                           ? `synced ${timeAgo(c.lastSyncedAt)}`
-                          : "syncing…"}
+                          : c.provider === "docker"
+                            ? "awaiting first heartbeat"
+                            : "syncing…"}
                       </span>
                       {c.lastError && (
                         <span
@@ -193,8 +177,30 @@ export function IntegrationsList({
         );
       })}
 
-      <ConnectVercelDialog open={vercelOpen} onOpenChange={setVercelOpen} />
-      <ConnectRenderDialog open={renderOpen} onOpenChange={setRenderOpen} />
+      <ConnectVercelDialog
+        open={openDialog === "vercel"}
+        onOpenChange={(v) => setOpenDialog(v ? "vercel" : null)}
+      />
+      <ConnectRenderDialog
+        open={openDialog === "render"}
+        onOpenChange={(v) => setOpenDialog(v ? "render" : null)}
+      />
+      <ConnectRailwayDialog
+        open={openDialog === "railway"}
+        onOpenChange={(v) => setOpenDialog(v ? "railway" : null)}
+      />
+      <ConnectNeonDialog
+        open={openDialog === "neon"}
+        onOpenChange={(v) => setOpenDialog(v ? "neon" : null)}
+      />
+      <ConnectSupabaseDialog
+        open={openDialog === "supabase"}
+        onOpenChange={(v) => setOpenDialog(v ? "supabase" : null)}
+      />
+      <ConnectDockerDialog
+        open={openDialog === "docker"}
+        onOpenChange={(v) => setOpenDialog(v ? "docker" : null)}
+      />
     </div>
   );
 }

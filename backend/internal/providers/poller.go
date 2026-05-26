@@ -10,11 +10,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/ahomsi0/opslens/backend/internal/crypto"
 	"github.com/ahomsi0/opslens/backend/internal/db"
+	"github.com/ahomsi0/opslens/backend/internal/providers/neon"
+	"github.com/ahomsi0/opslens/backend/internal/providers/railway"
 	"github.com/ahomsi0/opslens/backend/internal/providers/render"
+	"github.com/ahomsi0/opslens/backend/internal/providers/supabase"
 	"github.com/ahomsi0/opslens/backend/internal/providers/vercel"
 )
 
@@ -106,24 +110,27 @@ func (p *Poller) syncOne(ctx context.Context, c db.ConnectionWithToken) {
 	syncCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
 
-	switch c.Provider {
-	case "vercel":
-		n, err := vercel.Sync(syncCtx, p.pool, c.ID, token)
-		if err != nil {
-			log.Printf("poller: vercel sync %s: %v", id, err)
-			db.RecordSyncError(ctx, p.pool, c.ID, err.Error())
-			return
-		}
-		log.Printf("poller: vercel sync %s OK (%d projects)", c.Name, n)
-	case "render":
-		n, err := render.Sync(syncCtx, p.pool, c.ID, token)
-		if err != nil {
-			log.Printf("poller: render sync %s: %v", id, err)
-			db.RecordSyncError(ctx, p.pool, c.ID, err.Error())
-			return
-		}
-		log.Printf("poller: render sync %s OK (%d services)", c.Name, n)
-	default:
-		log.Printf("poller: unknown provider %q for connection %s", c.Provider, id)
+	type syncFn func(context.Context, *pgxpool.Pool, uuid.UUID, string) (int, error)
+	dispatch := map[string]syncFn{
+		"vercel":   vercel.Sync,
+		"render":   render.Sync,
+		"neon":     neon.Sync,
+		"supabase": supabase.Sync,
+		"railway":  railway.Sync,
 	}
+	fn, ok := dispatch[c.Provider]
+	if !ok {
+		// Docker uses a push (heartbeat) model, no poller sync.
+		if c.Provider != "docker" {
+			log.Printf("poller: unknown provider %q for connection %s", c.Provider, id)
+		}
+		return
+	}
+	n, err := fn(syncCtx, p.pool, c.ID, token)
+	if err != nil {
+		log.Printf("poller: %s sync %s: %v", c.Provider, id, err)
+		db.RecordSyncError(ctx, p.pool, c.ID, err.Error())
+		return
+	}
+	log.Printf("poller: %s sync %s OK (%d projects)", c.Provider, c.Name, n)
 }

@@ -75,6 +75,7 @@ func main() {
 	wsh := &ws.Handler{Hub: hub}
 	connAPI := &api.ConnectionAPI{Pool: pool, Sealer: sealer, Syncer: poller}
 	aiAPI := &api.AIAPI{Pool: pool}
+	dockerAPI := &api.DockerAPI{Pool: pool, Sealer: sealer}
 
 	r := chi.NewRouter()
 	r.Use(chimw.RequestID)
@@ -102,6 +103,8 @@ func main() {
 
 	r.Get("/api/ai/config", aiAPI.Config)
 	r.Post("/api/ai/chat", aiAPI.Chat)
+
+	r.Post("/api/docker/heartbeat", dockerAPI.Heartbeat)
 
 	srv := &http.Server{
 		Addr:              ":" + port,

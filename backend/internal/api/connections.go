@@ -14,7 +14,11 @@ import (
 
 	"github.com/ahomsi0/opslens/backend/internal/crypto"
 	"github.com/ahomsi0/opslens/backend/internal/db"
+	"github.com/ahomsi0/opslens/backend/internal/providers/docker"
+	"github.com/ahomsi0/opslens/backend/internal/providers/neon"
+	"github.com/ahomsi0/opslens/backend/internal/providers/railway"
 	"github.com/ahomsi0/opslens/backend/internal/providers/render"
+	"github.com/ahomsi0/opslens/backend/internal/providers/supabase"
 	"github.com/ahomsi0/opslens/backend/internal/providers/vercel"
 )
 
@@ -43,6 +47,12 @@ type createReq struct {
 	Provider string `json:"provider"`
 	Name     string `json:"name"`
 	Token    string `json:"token"`
+	HostName string `json:"hostName,omitempty"` // docker only
+}
+
+type dockerCreateResp struct {
+	Connection db.Connection `json:"connection"`
+	AgentToken string        `json:"agentToken"`
 }
 
 func (a *ConnectionAPI) Create(w http.ResponseWriter, r *http.Request) {
@@ -55,20 +65,26 @@ func (a *ConnectionAPI) Create(w http.ResponseWriter, r *http.Request) {
 	req.Provider = strings.TrimSpace(strings.ToLower(req.Provider))
 	req.Name = strings.TrimSpace(req.Name)
 	req.Token = strings.TrimSpace(req.Token)
-	if req.Provider == "" || req.Token == "" {
-		writeErr(w, http.StatusBadRequest, "provider and token are required")
+	if req.Provider == "" {
+		writeErr(w, http.StatusBadRequest, "provider is required")
 		return
 	}
 	if req.Name == "" {
 		req.Name = strings.ToUpper(req.Provider[:1]) + req.Provider[1:]
 	}
 
-	// Validate the token against the provider before storing anything.
-	var accountLabel string
 	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
 	defer cancel()
+
+	var accountLabel string
+	var tokenToStore string
+
 	switch req.Provider {
 	case "vercel":
+		if req.Token == "" {
+			writeErr(w, http.StatusBadRequest, "token is required")
+			return
+		}
 		user, err := vercel.NewClient(req.Token).VerifyToken(ctx)
 		if err != nil {
 			if errors.Is(err, vercel.ErrInvalidToken) {
@@ -82,7 +98,13 @@ func (a *ConnectionAPI) Create(w http.ResponseWriter, r *http.Request) {
 		if accountLabel == "" {
 			accountLabel = user.Email
 		}
+		tokenToStore = req.Token
+
 	case "render":
+		if req.Token == "" {
+			writeErr(w, http.StatusBadRequest, "token is required")
+			return
+		}
 		owner, err := render.NewClient(req.Token).VerifyToken(ctx)
 		if err != nil {
 			if errors.Is(err, render.ErrInvalidToken) {
@@ -96,12 +118,84 @@ func (a *ConnectionAPI) Create(w http.ResponseWriter, r *http.Request) {
 		if accountLabel == "" {
 			accountLabel = owner.Email
 		}
+		tokenToStore = req.Token
+
+	case "neon":
+		if req.Token == "" {
+			writeErr(w, http.StatusBadRequest, "token is required")
+			return
+		}
+		user, err := neon.NewClient(req.Token).VerifyToken(ctx)
+		if err != nil {
+			if errors.Is(err, neon.ErrInvalidToken) {
+				writeErr(w, http.StatusUnauthorized, "Neon rejected the token")
+				return
+			}
+			writeErr(w, http.StatusBadGateway, "could not reach Neon: "+err.Error())
+			return
+		}
+		accountLabel = user.Login
+		if accountLabel == "" {
+			accountLabel = user.Email
+		}
+		if accountLabel == "" {
+			accountLabel = user.Name
+		}
+		tokenToStore = req.Token
+
+	case "supabase":
+		if req.Token == "" {
+			writeErr(w, http.StatusBadRequest, "token is required")
+			return
+		}
+		orgName, err := supabase.NewClient(req.Token).VerifyToken(ctx)
+		if err != nil {
+			if errors.Is(err, supabase.ErrInvalidToken) {
+				writeErr(w, http.StatusUnauthorized, "Supabase rejected the token")
+				return
+			}
+			writeErr(w, http.StatusBadGateway, "could not reach Supabase: "+err.Error())
+			return
+		}
+		accountLabel = orgName
+		tokenToStore = req.Token
+
+	case "railway":
+		if req.Token == "" {
+			writeErr(w, http.StatusBadRequest, "token is required")
+			return
+		}
+		user, err := railway.NewClient(req.Token).VerifyToken(ctx)
+		if err != nil {
+			if errors.Is(err, railway.ErrInvalidToken) {
+				writeErr(w, http.StatusUnauthorized, "Railway rejected the token")
+				return
+			}
+			writeErr(w, http.StatusBadGateway, "could not reach Railway: "+err.Error())
+			return
+		}
+		accountLabel = user.Name
+		if accountLabel == "" {
+			accountLabel = user.Email
+		}
+		tokenToStore = req.Token
+
+	case "docker":
+		// Docker doesn't require a SaaS token. We generate a heartbeat token
+		// the user installs on their host.
+		host := strings.TrimSpace(req.HostName)
+		if host == "" {
+			host = "docker-host"
+		}
+		accountLabel = host
+		tokenToStore = docker.NewToken()
+
 	default:
 		writeErr(w, http.StatusBadRequest, "unsupported provider: "+req.Provider)
 		return
 	}
 
-	enc, err := a.Sealer.EncryptString(req.Token)
+	enc, err := a.Sealer.EncryptString(tokenToStore)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "encryption failed")
 		return
@@ -113,17 +207,23 @@ func (a *ConnectionAPI) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Kick off an immediate sync in the background so the user sees their
-	// real projects within a few seconds of clicking Connect.
+	// Kick off an immediate sync (no-op for docker which uses push).
 	go func() {
 		bg, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
-		if err := a.Syncer.SyncNow(bg, conn.ID.String()); err != nil {
-			// already logged inside the syncer
-			_ = err
-		}
+		_ = a.Syncer.SyncNow(bg, conn.ID.String())
 	}()
 
+	// Docker connections need to return the plain-text agent token once so
+	// the user can install it on their host. All other providers just return
+	// the connection metadata.
+	if req.Provider == "docker" {
+		writeJSON(w, http.StatusCreated, dockerCreateResp{
+			Connection: conn,
+			AgentToken: tokenToStore,
+		})
+		return
+	}
 	writeJSON(w, http.StatusCreated, conn)
 }
 
