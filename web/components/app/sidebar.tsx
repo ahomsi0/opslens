@@ -142,7 +142,7 @@ export function Sidebar({ projects }: { projects: ProjectSummary[] }) {
 
       <div className="m-3 mt-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
         <div className="flex items-center gap-2 text-xs font-medium text-[var(--color-fg)]">
-          <Sparkles className="h-3.5 w-3.5 text-[oklch(0.85_0.14_295)]" />
+          <Sparkles className="h-3.5 w-3.5 text-[oklch(0.78_0.16_350)]" />
           AI assistant
         </div>
         <p className="mt-1 text-[11px] leading-relaxed text-[var(--color-fg-muted)]">
