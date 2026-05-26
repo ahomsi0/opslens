@@ -29,12 +29,32 @@ export async function fetchAuthConfig(): Promise<AuthConfig> {
   }
 }
 
+// On the server, manually forward the session cookie from the incoming
+// Vercel request because Node fetch doesn't pick up cookies automatically.
+// On the client, `credentials: "include"` handles it.
+async function forwardedCookie(): Promise<string | undefined> {
+  if (typeof window !== "undefined") return undefined;
+  try {
+    const mod = await import("next/headers");
+    const cookieStore = await mod.cookies();
+    const v = cookieStore.get("opslens_session")?.value;
+    return v ? `opslens_session=${v}` : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function fetchMe(
   init?: RequestInit,
 ): Promise<AuthUser | null> {
   try {
+    const cookie = await forwardedCookie();
     const res = await fetch(apiUrl("/api/auth/me"), {
       ...init,
+      headers: {
+        ...(cookie ? { Cookie: cookie } : {}),
+        ...(init?.headers || {}),
+      },
       credentials: "include",
       cache: "no-store",
     });
