@@ -32,7 +32,7 @@ export function AppShell({
 
   return (
     <div className="flex min-h-screen">
-      <Sidebar />
+      <Sidebar projects={projects} />
       <div className="flex-1 min-w-0 flex flex-col">
         <TopBar
           breadcrumbs={breadcrumbs}

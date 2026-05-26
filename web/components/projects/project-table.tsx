@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowUpDown,
   ChevronDown,
@@ -51,9 +52,12 @@ const STATUS_ORDER: Record<ProjectStatus, number> = {
 };
 
 export function ProjectTable({ projects }: { projects: ProjectSummary[] }) {
+  const searchParams = useSearchParams();
+  const initialProvider = searchParams.get("provider") as Provider | null;
+
   const [query, setQuery] = useState("");
   const [activeProviders, setActiveProviders] = useState<Set<Provider>>(
-    new Set(),
+    () => (initialProvider ? new Set<Provider>([initialProvider]) : new Set()),
   );
   const [activeStatuses, setActiveStatuses] = useState<Set<ProjectStatus>>(
     new Set(),
@@ -63,6 +67,16 @@ export function ProjectTable({ projects }: { projects: ProjectSummary[] }) {
     key: "status",
     dir: "asc",
   });
+
+  // Re-apply provider filter when the URL param changes (e.g. user clicks
+  // a different provider in the sidebar dropdown while already on /projects).
+  useEffect(() => {
+    if (initialProvider) {
+      setActiveProviders(new Set<Provider>([initialProvider]));
+    } else {
+      setActiveProviders(new Set());
+    }
+  }, [initialProvider]);
 
   const providers = useMemo(
     () => Array.from(new Set(projects.map((p) => p.provider))).sort() as Provider[],

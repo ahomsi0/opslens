@@ -63,18 +63,20 @@ function Mark({
         </svg>
       );
 
-    // Render — rounded square in their brand teal, with a small inset hex
-    // hinting at "renderer / 3D output." Matches Render's app/favicon style.
+    // Render — their canonical dark-square mark with the two stacked white
+    // glyphs (small rounded top piece + taller body). Self-contained colors,
+    // ignores currentColor so it matches Render's brand exactly everywhere.
     case "render":
       return (
         <svg
-          viewBox="0 0 24 24"
+          viewBox="0 0 32 32"
           fill="none"
           className={className}
           aria-hidden
         >
-          <rect width="24" height="24" rx="5.5" fill="currentColor" />
-          <circle cx="12" cy="12" r="4" fill="#0A0B0F" />
+          <rect width="32" height="32" rx="7" fill="#0A0B0F" />
+          <rect x="6" y="6" width="9" height="9" rx="2.5" fill="white" />
+          <rect x="15.5" y="9.5" width="10.5" height="16.5" rx="2.5" fill="white" />
         </svg>
       );
 
