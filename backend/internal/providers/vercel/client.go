@@ -73,9 +73,20 @@ type Project struct {
 		Org              string `json:"org"`              // org name
 		ProductionBranch string `json:"productionBranch"` // 'main'
 	} `json:"link"`
-	Targets        map[string]Target `json:"targets,omitempty"`
-	LatestDeploy   *LatestDeployment `json:"latestDeployments,omitempty"`
-	Alias          []Alias           `json:"alias,omitempty"`
+	Targets           map[string]Target  `json:"targets,omitempty"`
+	LatestDeployments []LatestDeployment `json:"latestDeployments,omitempty"`
+	Alias             []Alias            `json:"alias,omitempty"`
+}
+
+// LatestDeployment is the live latest deployment per env. Vercel actually
+// returns this as an array — typically a single 'production' entry — so we
+// read the first element.
+func (p Project) LatestProductionDeployment() *LatestDeployment {
+	for i := range p.LatestDeployments {
+		// Vercel sorts the array by target priority; first non-empty wins.
+		return &p.LatestDeployments[i]
+	}
+	return nil
 }
 
 type Target struct {

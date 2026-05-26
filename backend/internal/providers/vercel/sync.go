@@ -131,17 +131,18 @@ func primaryDomain(p Project) string {
 	if len(p.Alias) > 0 {
 		return p.Alias[0].Domain
 	}
-	if p.LatestDeploy != nil && p.LatestDeploy.URL != "" {
-		return p.LatestDeploy.URL
+	if d := p.LatestProductionDeployment(); d != nil && d.URL != "" {
+		return d.URL
 	}
 	return p.Name + ".vercel.app"
 }
 
 func mapStatus(p Project) string {
-	if p.LatestDeploy == nil {
+	d := p.LatestProductionDeployment()
+	if d == nil {
 		return "healthy"
 	}
-	switch p.LatestDeploy.ReadyState {
+	switch d.ReadyState {
 	case "READY":
 		return "healthy"
 	case "ERROR":
