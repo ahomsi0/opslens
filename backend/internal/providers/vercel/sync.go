@@ -43,12 +43,16 @@ func Sync(ctx context.Context, pool *pgxpool.Pool, connectionID uuid.UUID, token
 		createdAt := time.UnixMilli(p.CreatedAt)
 
 		var projectID uuid.UUID
+		// The unique index on (connection_id, external_id) is partial — it only
+		// applies WHERE connection_id IS NOT NULL. ON CONFLICT must repeat the
+		// same predicate so Postgres can match the arbiter index.
 		err := tx.QueryRow(ctx, `
 			INSERT INTO projects (id, name, slug, provider, environment, region,
 			                     repo_url, domain, status, created_at,
 			                     source, connection_id, external_id, live_metrics)
 			VALUES ($1,$2,$3,'vercel',$4,$5,$6,$7,$8,$9,'vercel',$10,$11,FALSE)
-			ON CONFLICT (connection_id, external_id) DO UPDATE SET
+			ON CONFLICT (connection_id, external_id) WHERE connection_id IS NOT NULL
+			DO UPDATE SET
 			    name        = EXCLUDED.name,
 			    slug        = EXCLUDED.slug,
 			    environment = EXCLUDED.environment,
@@ -99,7 +103,8 @@ func Sync(ctx context.Context, pool *pgxpool.Pool, connectionID uuid.UUID, token
 				INSERT INTO deployments (id, project_id, status, commit_sha, commit_msg,
 				                        author, branch, duration_ms, created_at, external_id)
 				VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-				ON CONFLICT (project_id, external_id) DO UPDATE SET
+				ON CONFLICT (project_id, external_id) WHERE external_id IS NOT NULL
+				DO UPDATE SET
 				    status      = EXCLUDED.status,
 				    duration_ms = EXCLUDED.duration_ms
 			`,
