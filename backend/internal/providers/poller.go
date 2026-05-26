@@ -14,6 +14,7 @@ import (
 
 	"github.com/ahomsi0/opslens/backend/internal/crypto"
 	"github.com/ahomsi0/opslens/backend/internal/db"
+	"github.com/ahomsi0/opslens/backend/internal/providers/render"
 	"github.com/ahomsi0/opslens/backend/internal/providers/vercel"
 )
 
@@ -114,6 +115,14 @@ func (p *Poller) syncOne(ctx context.Context, c db.ConnectionWithToken) {
 			return
 		}
 		log.Printf("poller: vercel sync %s OK (%d projects)", c.Name, n)
+	case "render":
+		n, err := render.Sync(syncCtx, p.pool, c.ID, token)
+		if err != nil {
+			log.Printf("poller: render sync %s: %v", id, err)
+			db.RecordSyncError(ctx, p.pool, c.ID, err.Error())
+			return
+		}
+		log.Printf("poller: render sync %s OK (%d services)", c.Name, n)
 	default:
 		log.Printf("poller: unknown provider %q for connection %s", c.Provider, id)
 	}

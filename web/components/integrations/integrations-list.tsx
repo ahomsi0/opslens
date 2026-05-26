@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ProviderIcon, providerLabels } from "@/components/projects/provider-icon";
 import { ConnectVercelDialog } from "./connect-vercel-dialog";
+import { ConnectRenderDialog } from "./connect-render-dialog";
 import { deleteConnection } from "@/lib/api";
 import { timeAgo } from "@/lib/format";
 import type { Connection, Provider } from "@/lib/types";
@@ -26,8 +27,9 @@ const catalog: ProviderInfo[] = [
   },
   {
     provider: "render",
-    description: "Services, deploys, and live CPU/memory metrics from Render.",
-    status: "coming-soon",
+    description:
+      "Pull your Render services, their live URLs, and recent deploys. Re-syncs every 30 seconds.",
+    status: "available",
   },
   {
     provider: "railway",
@@ -58,6 +60,7 @@ export function IntegrationsList({
   connections: Connection[];
 }) {
   const [vercelOpen, setVercelOpen] = useState(false);
+  const [renderOpen, setRenderOpen] = useState(false);
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
@@ -124,6 +127,17 @@ export function IntegrationsList({
                     {hasAny ? "Add another" : "Connect"}
                   </Button>
                 )}
+                {p.provider === "render" && (
+                  <Button
+                    size="sm"
+                    variant={hasAny ? "outline" : "default"}
+                    onClick={() => setRenderOpen(true)}
+                    className="gap-1.5"
+                  >
+                    <Plug className="h-3.5 w-3.5" />
+                    {hasAny ? "Add another" : "Connect"}
+                  </Button>
+                )}
                 {p.status === "coming-soon" && (
                   <Button size="sm" variant="outline" disabled>
                     Coming soon
@@ -180,6 +194,7 @@ export function IntegrationsList({
       })}
 
       <ConnectVercelDialog open={vercelOpen} onOpenChange={setVercelOpen} />
+      <ConnectRenderDialog open={renderOpen} onOpenChange={setRenderOpen} />
     </div>
   );
 }

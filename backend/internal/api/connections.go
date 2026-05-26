@@ -14,6 +14,7 @@ import (
 
 	"github.com/ahomsi0/opslens/backend/internal/crypto"
 	"github.com/ahomsi0/opslens/backend/internal/db"
+	"github.com/ahomsi0/opslens/backend/internal/providers/render"
 	"github.com/ahomsi0/opslens/backend/internal/providers/vercel"
 )
 
@@ -80,6 +81,20 @@ func (a *ConnectionAPI) Create(w http.ResponseWriter, r *http.Request) {
 		accountLabel = user.Username
 		if accountLabel == "" {
 			accountLabel = user.Email
+		}
+	case "render":
+		owner, err := render.NewClient(req.Token).VerifyToken(ctx)
+		if err != nil {
+			if errors.Is(err, render.ErrInvalidToken) {
+				writeErr(w, http.StatusUnauthorized, "Render rejected the token")
+				return
+			}
+			writeErr(w, http.StatusBadGateway, "could not reach Render: "+err.Error())
+			return
+		}
+		accountLabel = owner.Name
+		if accountLabel == "" {
+			accountLabel = owner.Email
 		}
 	default:
 		writeErr(w, http.StatusBadRequest, "unsupported provider: "+req.Provider)
