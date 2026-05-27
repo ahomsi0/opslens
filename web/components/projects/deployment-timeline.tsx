@@ -76,9 +76,9 @@ export function DeploymentTimeline({
                   <Icon className="h-3.5 w-3.5" />
                 </span>
               </div>
-              <div className="flex-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+              <div className="flex-1 min-w-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="flex flex-wrap items-baseline gap-2.5 min-w-0 flex-1">
                     <span
                       className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider ${s.color}`}
                     >
@@ -87,7 +87,11 @@ export function DeploymentTimeline({
                     <span className="font-mono text-xs text-[var(--color-fg-muted)]">
                       {shortSha(d.commitSha)}
                     </span>
-                    <span className="truncate text-sm">{d.commitMsg}</span>
+                    {/* Commit message wraps onto multiple lines instead of
+                        truncating — some real commits are paragraph-length. */}
+                    <span className="text-sm break-words whitespace-pre-wrap min-w-0">
+                      {d.commitMsg}
+                    </span>
                   </div>
                   <span className="text-xs text-[var(--color-fg-subtle)] shrink-0">
                     {timeAgo(d.createdAt)}

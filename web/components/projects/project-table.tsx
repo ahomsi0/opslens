@@ -329,17 +329,19 @@ export function ProjectTable({ projects }: { projects: ProjectSummary[] }) {
                     <td className="px-4 py-3 text-right font-mono tabular-nums text-[var(--color-fg-muted)]">
                       {p.latencyP95Ms ? formatMs(p.latencyP95Ms) : "—"}
                     </td>
-                    <td className="px-4 py-3 min-w-[260px]">
+                    <td className="px-4 py-3 min-w-[320px] max-w-[480px] align-top">
                       {p.lastDeployment ? (
-                        <div className="flex items-center gap-2 text-xs">
-                          <GitCommit className="h-3 w-3 shrink-0 text-[var(--color-fg-subtle)]" />
-                          <span className="font-mono text-[var(--color-fg-muted)]">
+                        <div className="flex items-start gap-2 text-xs">
+                          <GitCommit className="h-3 w-3 shrink-0 mt-0.5 text-[var(--color-fg-subtle)]" />
+                          <span className="font-mono shrink-0 text-[var(--color-fg-muted)]">
                             {shortSha(p.lastDeployment.commitSha)}
                           </span>
-                          <span className="truncate text-[var(--color-fg)] max-w-[180px]">
+                          {/* Allow commit messages to wrap onto multiple lines.
+                              Row heights vary; long commits stay readable. */}
+                          <span className="text-[var(--color-fg)] break-words min-w-0 flex-1">
                             {p.lastDeployment.commitMsg}
                           </span>
-                          <span className="ml-auto shrink-0 text-[var(--color-fg-subtle)]">
+                          <span className="ml-2 shrink-0 text-[var(--color-fg-subtle)]">
                             {timeAgo(p.lastDeployment.createdAt)}
                           </span>
                         </div>

@@ -110,10 +110,17 @@ export function ProjectCard({
           </div>
 
           {last && (
-            <div className="mt-4 flex items-center gap-2 text-xs text-[var(--color-fg-muted)] border-t border-[var(--color-border)] pt-3">
-              <GitCommit className="h-3.5 w-3.5" />
-              <span className="font-mono">{shortSha(last.commitSha)}</span>
-              <span className="truncate flex-1">{last.commitMsg}</span>
+            <div className="mt-4 flex items-start gap-2 text-xs text-[var(--color-fg-muted)] border-t border-[var(--color-border)] pt-3">
+              <GitCommit className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+              <span className="font-mono shrink-0">
+                {shortSha(last.commitSha)}
+              </span>
+              {/* Wrap long commit messages instead of truncating — cards in
+                  the grid will have different heights but every message is
+                  fully visible. */}
+              <span className="flex-1 break-words min-w-0">
+                {last.commitMsg}
+              </span>
               <span className="text-[var(--color-fg-subtle)] shrink-0">
                 {timeAgo(last.createdAt)}
               </span>
