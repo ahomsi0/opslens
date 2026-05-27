@@ -9,7 +9,6 @@ import {
   ChevronRight,
   LayoutDashboard,
   Plug,
-  Sparkles,
 } from "lucide-react";
 import { OpslensLogo } from "@/components/landing/opslens-logo";
 import {
@@ -147,18 +146,6 @@ export function Sidebar({ projects }: { projects: ProjectSummary[] }) {
         />
       </nav>
 
-      <div className="m-3 mt-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
-        <div className="flex items-center gap-2 text-xs font-medium text-[var(--color-fg)]">
-          <Sparkles className="h-3.5 w-3.5 text-[oklch(0.85_0.14_295)]" />
-          AI assistant
-        </div>
-        <p className="mt-1 text-[11px] leading-relaxed text-[var(--color-fg-muted)]">
-          Ask why your app is slow, or what changed before downtime.
-        </p>
-        <kbd className="mt-3 inline-flex items-center gap-1 rounded border border-[var(--color-border-strong)] bg-[var(--color-bg-elevated)] px-1.5 py-0.5 text-[10px] font-mono text-[var(--color-fg-muted)]">
-          ⌘ K
-        </kbd>
-      </div>
     </aside>
   );
 }
