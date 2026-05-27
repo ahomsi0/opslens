@@ -2,16 +2,20 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ExternalLink, Info } from "lucide-react";
+import { AlertOctagon, ExternalLink, Info, Lock } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LatencyChart } from "@/components/charts/latency-chart";
+import { IncidentList } from "@/components/incidents/incident-list";
 import { DeploymentTimeline } from "./deployment-timeline";
 import {
+  fetchProjectIncidents,
   fetchProjectMetrics,
+  type Incident,
   type ProjectMetrics,
+  type SSLInfo,
 } from "@/lib/api";
-import { formatMs } from "@/lib/format";
+import { formatMs, timeAgo } from "@/lib/format";
 import type { Deployment, ProjectSummary } from "@/lib/types";
 import { providerLabels } from "./provider-icon";
 
@@ -26,14 +30,21 @@ export function ProjectOverview({
 }) {
   const [window, setWindow] = useState<Window>("24h");
   const [metrics, setMetrics] = useState<ProjectMetrics | null>(null);
+  const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [ssl, setSSL] = useState<SSLInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let alive = true;
     setLoading(true);
-    fetchProjectMetrics(project.id, window).then((m) => {
+    Promise.all([
+      fetchProjectMetrics(project.id, window),
+      fetchProjectIncidents(project.id),
+    ]).then(([m, i]) => {
       if (alive) {
         setMetrics(m);
+        setIncidents(i.incidents);
+        setSSL(i.ssl);
         setLoading(false);
       }
     });
@@ -45,18 +56,48 @@ export function ProjectOverview({
   // Re-fetch periodically so the page reflects new probe results.
   useEffect(() => {
     const id = setInterval(() => {
-      fetchProjectMetrics(project.id, window).then((m) => {
+      Promise.all([
+        fetchProjectMetrics(project.id, window),
+        fetchProjectIncidents(project.id),
+      ]).then(([m, i]) => {
         if (m) setMetrics(m);
+        setIncidents(i.incidents);
+        setSSL(i.ssl);
       });
     }, 60_000);
     return () => clearInterval(id);
   }, [project.id, window]);
+
+  const openIncident = incidents.find((i) => !i.endedAt);
 
   const summary = metrics?.latency.summary;
   const series = metrics?.latency.series ?? [];
 
   return (
     <div className="space-y-6">
+      {/* Open-incident banner */}
+      {openIncident && (
+        <div className="flex items-start gap-3 rounded-xl border border-[oklch(0.69_0.22_25/0.5)] bg-[oklch(0.69_0.22_25/0.08)] p-4">
+          <AlertOctagon className="h-4 w-4 mt-0.5 text-[oklch(0.82_0.18_25)] shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold text-[oklch(0.82_0.18_25)]">
+              Ongoing incident · started {timeAgo(openIncident.startedAt)}
+            </div>
+            <div className="mt-1 text-xs text-[var(--color-fg-muted)] font-mono">
+              {openIncident.firstStatus
+                ? `HTTP ${openIncident.firstStatus}`
+                : "no response"}
+              {openIncident.firstError && (
+                <>
+                  <span className="mx-1.5 text-[var(--color-fg-subtle)]">·</span>
+                  <span>{openIncident.firstError}</span>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold tracking-tight">Health</h2>
         <WindowSwitcher value={window} onChange={setWindow} />
@@ -97,6 +138,19 @@ export function ProjectOverview({
 
       {/* Real latency chart */}
       <LatencyChart series={series} />
+
+      {/* SSL certificate info */}
+      {ssl && <SSLCard ssl={ssl} />}
+
+      {/* Recent incidents for this project */}
+      {incidents.length > 0 && (
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight mb-3">
+            Recent incidents
+          </h2>
+          <IncidentList incidents={incidents.slice(0, 5)} showProject={false} />
+        </div>
+      )}
 
       {/* Honest panel about CPU / memory / network */}
       <Card className="p-5">
@@ -242,5 +296,49 @@ function ResourceHint({ label, body }: { label: string; body: string }) {
       <div className="font-semibold text-[var(--color-fg)]">{label}</div>
       <div className="mt-0.5 leading-relaxed">{body}</div>
     </div>
+  );
+}
+
+function SSLCard({ ssl }: { ssl: SSLInfo }) {
+  const days = ssl.daysRemaining;
+  const tone =
+    days < 7
+      ? "border-[oklch(0.69_0.22_25/0.45)] text-[oklch(0.82_0.18_25)]"
+      : days < 30
+        ? "border-[oklch(0.82_0.16_80/0.45)] text-[oklch(0.88_0.14_80)]"
+        : "border-[var(--color-border)] text-[var(--color-fg-muted)]";
+
+  return (
+    <Card className="p-4">
+      <div className="flex items-center gap-3">
+        <Lock
+          className={
+            "h-4 w-4 " +
+            (days < 7
+              ? "text-[oklch(0.82_0.18_25)]"
+              : days < 30
+                ? "text-[oklch(0.88_0.14_80)]"
+                : "text-[oklch(0.78_0.16_155)]")
+          }
+        />
+        <div className="flex-1 min-w-0">
+          <div className="text-[10px] uppercase tracking-wider text-[var(--color-fg-subtle)]">
+            TLS certificate
+          </div>
+          <div className="mt-0.5 text-sm font-medium text-[var(--color-fg)]">
+            {days >= 0 ? `Expires in ${days} day${days === 1 ? "" : "s"}` : "Expired"}
+          </div>
+          <div className="mt-0.5 text-[11px] font-mono text-[var(--color-fg-muted)] truncate">
+            Issued by {ssl.issuer} · expires{" "}
+            {new Date(ssl.expiresAt).toLocaleDateString()}
+          </div>
+        </div>
+        <span
+          className={`inline-flex items-center rounded-md border px-2 py-1 text-[10px] font-mono uppercase tracking-wider ${tone}`}
+        >
+          {days < 7 ? "renew now" : days < 30 ? "soon" : "valid"}
+        </span>
+      </div>
+    </Card>
   );
 }

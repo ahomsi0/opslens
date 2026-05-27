@@ -244,6 +244,49 @@ export async function fetchProjectMetrics(
   }
 }
 
+// --- Incidents ---
+
+export interface Incident {
+  id: string;
+  projectId: string;
+  projectName: string;
+  startedAt: string;
+  endedAt?: string | null;
+  durationMs: number;
+  severity: string;
+  firstStatus?: number | null;
+  firstError?: string | null;
+  lastFailureAt?: string | null;
+}
+
+export interface SSLInfo {
+  issuer: string;
+  expiresAt: string;
+  daysRemaining: number;
+  checkedAt: string;
+}
+
+export async function fetchIncidents(): Promise<Incident[]> {
+  try {
+    const d = await get<{ incidents: Incident[] }>(`/api/incidents`);
+    return d.incidents ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchProjectIncidents(
+  projectId: string,
+): Promise<{ incidents: Incident[]; ssl: SSLInfo | null }> {
+  try {
+    return await get<{ incidents: Incident[]; ssl: SSLInfo | null }>(
+      `/api/projects/${projectId}/incidents`,
+    );
+  } catch {
+    return { incidents: [], ssl: null };
+  }
+}
+
 /**
  * Streams an AI chat completion from the backend. Yields incremental text
  * deltas. Throws if the backend isn't configured (503) so the caller can

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import {
+  AlertOctagon,
   Boxes,
   ChevronRight,
   LayoutDashboard,
@@ -132,6 +133,12 @@ export function Sidebar({ projects }: { projects: ProjectSummary[] }) {
           )}
         </div>
 
+        <NavLink
+          href="/incidents"
+          label="Incidents"
+          icon={<AlertOctagon className="h-4 w-4" />}
+          active={pathname.startsWith("/incidents")}
+        />
         <NavLink
           href="/integrations"
           label="Integrations"

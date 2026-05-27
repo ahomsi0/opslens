@@ -6,10 +6,12 @@ package uptime
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -117,36 +119,57 @@ func (p *Prober) loadTargets(ctx context.Context) ([]probeTarget, error) {
 }
 
 func (p *Prober) probe(ctx context.Context, t probeTarget) {
-	url := normalizeURL(t.Domain)
+	urlStr := normalizeURL(t.Domain)
 	start := time.Now()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodHead, url, nil)
+	// SSL sample in parallel — we don't want it to extend the probe duration
+	// or affect the latency/ok determination. Buffered channel so the goroutine
+	// always finishes even if we return early.
+	type sslResult struct {
+		issuer  string
+		expires *time.Time
+	}
+	sslCh := make(chan sslResult, 1)
+	go func() {
+		issuer, exp := sampleSSL(ctx, extractDomain(t.Domain))
+		sslCh <- sslResult{issuer, exp}
+	}()
+	collectSSL := func() (string, *time.Time) {
+		select {
+		case r := <-sslCh:
+			return r.issuer, r.expires
+		case <-time.After(6 * time.Second):
+			return "", nil
+		}
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodHead, urlStr, nil)
 	if err != nil {
-		p.record(ctx, t.ProjectID, false, 0, 0, err.Error())
+		issuer, exp := collectSSL()
+		p.record(ctx, t.ProjectID, false, 0, 0, err.Error(), issuer, exp)
 		return
 	}
 	req.Header.Set("User-Agent", "Opslens-Uptime/1.0 (+https://opslens-ah.vercel.app)")
 
 	resp, err := p.client.Do(req)
 	if err != nil {
-		// HEAD might be blocked — retry with GET. Some hosts return 405 on HEAD.
-		// We do a short GET with body draining suppressed.
 		if maybeHeadBlocked(err) {
-			resp, err = p.fallbackGet(ctx, url)
+			resp, err = p.fallbackGet(ctx, urlStr)
 		}
 		if err != nil {
-			p.record(ctx, t.ProjectID, false, int(time.Since(start).Milliseconds()), 0, friendlyError(err))
+			issuer, exp := collectSSL()
+			p.record(ctx, t.ProjectID, false, int(time.Since(start).Milliseconds()), 0, friendlyError(err), issuer, exp)
 			return
 		}
 	}
 	defer resp.Body.Close()
 
-	// Method-not-allowed on HEAD → retry with GET. Treat as healthy if GET works.
 	if resp.StatusCode == http.StatusMethodNotAllowed {
 		resp.Body.Close()
-		resp, err = p.fallbackGet(ctx, url)
+		resp, err = p.fallbackGet(ctx, urlStr)
 		if err != nil {
-			p.record(ctx, t.ProjectID, false, int(time.Since(start).Milliseconds()), 0, friendlyError(err))
+			issuer, exp := collectSSL()
+			p.record(ctx, t.ProjectID, false, int(time.Since(start).Milliseconds()), 0, friendlyError(err), issuer, exp)
 			return
 		}
 		defer resp.Body.Close()
@@ -158,7 +181,8 @@ func (p *Prober) probe(ctx context.Context, t probeTarget) {
 	if !ok {
 		errMsg = resp.Status
 	}
-	p.record(ctx, t.ProjectID, ok, latency, resp.StatusCode, errMsg)
+	issuer, exp := collectSSL()
+	p.record(ctx, t.ProjectID, ok, latency, resp.StatusCode, errMsg, issuer, exp)
 }
 
 func (p *Prober) fallbackGet(ctx context.Context, url string) (*http.Response, error) {
@@ -170,15 +194,73 @@ func (p *Prober) fallbackGet(ctx context.Context, url string) (*http.Response, e
 	return p.client.Do(req)
 }
 
-func (p *Prober) record(ctx context.Context, projectID uuid.UUID, ok bool, latency, status int, errMsg string) {
+func (p *Prober) record(ctx context.Context, projectID uuid.UUID, ok bool, latency, status int, errMsg, sslIssuer string, sslExpiresAt *time.Time) {
 	var errCol *string
 	if errMsg != "" {
 		errCol = &errMsg
 	}
+	var issuerCol *string
+	if sslIssuer != "" {
+		issuerCol = &sslIssuer
+	}
 	_, _ = p.pool.Exec(ctx, `
-		INSERT INTO uptime_checks (project_id, ok, latency_ms, status_code, error)
-		VALUES ($1, $2, $3, $4, $5)
-	`, projectID, ok, latency, status, errCol)
+		INSERT INTO uptime_checks (project_id, ok, latency_ms, status_code, error, ssl_issuer, ssl_expires_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`, projectID, ok, latency, status, errCol, issuerCol, sslExpiresAt)
+
+	// After every probe, evaluate the project's recent state and open/close
+	// incidents accordingly. Cheap query, runs once per probe.
+	evaluateIncident(ctx, p.pool, projectID, ok, status, errMsg)
+}
+
+// sampleSSL hits the domain with a TLS dial just to read the cert and pull
+// issuer + NotAfter. Done once per probe — cheap (a few hundred ms) since
+// we'd otherwise just rely on the http.Client doing its own handshake.
+func sampleSSL(ctx context.Context, domain string) (issuer string, expires *time.Time) {
+	d := strings.TrimSpace(domain)
+	d = strings.TrimPrefix(d, "https://")
+	d = strings.TrimPrefix(d, "http://")
+	// Strip any path/query.
+	if i := strings.IndexAny(d, "/?"); i > 0 {
+		d = d[:i]
+	}
+	host := d
+	if !strings.Contains(host, ":") {
+		host = host + ":443"
+	}
+	dialer := &net.Dialer{Timeout: 4 * time.Second}
+	rawConn, err := dialer.DialContext(ctx, "tcp", host)
+	if err != nil {
+		return "", nil
+	}
+	defer rawConn.Close()
+	conn := tls.Client(rawConn, &tls.Config{
+		ServerName: strings.SplitN(host, ":", 2)[0],
+		MinVersion: tls.VersionTLS12,
+	})
+	if err := conn.HandshakeContext(ctx); err != nil {
+		return "", nil
+	}
+	defer conn.Close()
+	certs := conn.ConnectionState().PeerCertificates
+	if len(certs) == 0 {
+		return "", nil
+	}
+	leaf := certs[0]
+	exp := leaf.NotAfter
+	return leaf.Issuer.CommonName, &exp
+}
+
+// extractDomain strips scheme / path so we can pass a bare host to TLS.
+func extractDomain(raw string) string {
+	if !strings.Contains(raw, "://") {
+		raw = "https://" + raw
+	}
+	u, err := url.Parse(raw)
+	if err != nil {
+		return raw
+	}
+	return u.Hostname()
 }
 
 func normalizeURL(domain string) string {
