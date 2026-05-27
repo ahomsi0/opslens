@@ -118,7 +118,8 @@ func main() {
 
 		r.Get("/api/projects", a.ListProjects)
 		r.Get("/api/projects/{id}", a.GetProject)
-		r.Get("/api/projects/{id}/deployments", a.ListDeployments)
+		r.Get("/api/projects/{id}/metrics", a.ProjectMetrics)
+	r.Get("/api/projects/{id}/deployments", a.ListDeployments)
 		r.Get("/api/projects/{id}/logs", a.ListLogs)
 
 		r.Get("/api/connections", connAPI.List)

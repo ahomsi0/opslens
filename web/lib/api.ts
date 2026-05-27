@@ -199,6 +199,51 @@ export async function fetchAIUsage(): Promise<AIUsage | null> {
   }
 }
 
+// --- Project metrics (real, from uptime probes) ---
+
+export interface LatencyPoint {
+  ts: string;
+  p50: number;
+  p95: number;
+  count: number;
+  failures: number;
+}
+
+export interface LatencySummary {
+  p50: number;
+  p95: number;
+  p99: number;
+}
+
+export interface UptimeStats {
+  percent: number;
+  total: number;
+  failed: number;
+  windowH: number;
+  hasData: boolean;
+}
+
+export interface ProjectMetrics {
+  latency: {
+    series: LatencyPoint[];
+    summary: LatencySummary | null;
+  };
+  uptime: UptimeStats | null;
+}
+
+export async function fetchProjectMetrics(
+  projectId: string,
+  window: "24h" | "7d" | "30d" = "24h",
+): Promise<ProjectMetrics | null> {
+  try {
+    return await get<ProjectMetrics>(
+      `/api/projects/${projectId}/metrics?window=${window}`,
+    );
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Streams an AI chat completion from the backend. Yields incremental text
  * deltas. Throws if the backend isn't configured (503) so the caller can

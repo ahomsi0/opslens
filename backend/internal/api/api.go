@@ -22,6 +22,10 @@ import (
 // Window we report uptime over. 30 days is the dashboard's standard window.
 const uptimeWindow = 30 * 24 * time.Hour
 
+// Shorter window for "current" latency stats on cards. Long enough to be
+// stable, short enough to reflect recent state.
+const latencyWindow = 24 * time.Hour
+
 type API struct {
 	Pool *pgxpool.Pool
 	Hub  *metrics.Hub
@@ -58,22 +62,17 @@ func (a *API) ListProjects(w http.ResponseWriter, r *http.Request) {
 		}
 		s.ActiveIncidents = incidentsFor(p)
 
-		// p95 latency + sparkline from live buffer
-		snap := a.Hub.Snapshot(p.ID)
-		if len(snap) > 0 {
-			s.LatencyP95Ms = p95Latency(snap)
-			spark := make([]int, 0, len(snap))
-			step := 1
-			if len(snap) > 60 {
-				step = len(snap) / 60
-			}
-			for i := 0; i < len(snap); i += step {
-				spark = append(spark, int(snap[i].LatencyMs))
-			}
-			s.LatencySpark = spark
-		} else {
-			s.LatencySpark = []int{}
+		// Real latency from uptime probes (last 24h).
+		if lat, _ := uptime.LatencyNow(ctx, a.Pool, p.ID, latencyWindow); lat != nil {
+			s.LatencyP95Ms = lat.P95
 		}
+		// Sparkline from binned probe history (24h, 1h buckets → 24 points).
+		series, _ := uptime.TimeSeries(ctx, a.Pool, p.ID, 24*time.Hour, time.Hour)
+		spark := make([]int, 0, len(series))
+		for _, pt := range series {
+			spark = append(spark, pt.P95)
+		}
+		s.LatencySpark = spark
 
 		last, _ := db.LatestDeployment(ctx, a.Pool, p.ID)
 		s.LastDeployment = last
@@ -109,12 +108,58 @@ func (a *API) GetProject(w http.ResponseWriter, r *http.Request) {
 		summary.UptimePct = -1
 	}
 	summary.ActiveIncidents = incidentsFor(*p)
-	snap := a.Hub.Snapshot(id)
-	summary.LatencyP95Ms = p95Latency(snap)
+	if lat, _ := uptime.LatencyNow(ctx, a.Pool, id, latencyWindow); lat != nil {
+		summary.LatencyP95Ms = lat.P95
+	}
 
 	writeJSON(w, http.StatusOK, map[string]any{
 		"project":     summary,
 		"deployments": deps,
+	})
+}
+
+// Metrics returns the real time-series data for the project detail page.
+// Pulls from uptime_checks; supports ?window=24h|7d|30d. CPU/memory/network
+// are NOT included because we don't have a source for them on free-tier
+// providers — see liveMetrics flag.
+func (a *API) ProjectMetrics(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	userID := auth.MustUser(ctx)
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	if _, err := db.GetProjectForUser(ctx, a.Pool, userID, id); err != nil {
+		writeErr(w, http.StatusNotFound, "not found")
+		return
+	}
+
+	window := 24 * time.Hour
+	bucket := 15 * time.Minute
+	switch r.URL.Query().Get("window") {
+	case "7d":
+		window = 7 * 24 * time.Hour
+		bucket = 2 * time.Hour
+	case "30d":
+		window = 30 * 24 * time.Hour
+		bucket = 8 * time.Hour
+	}
+
+	series, err := uptime.TimeSeries(ctx, a.Pool, id, window, bucket)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	summary, _ := uptime.LatencyNow(ctx, a.Pool, id, window)
+	up, _ := uptime.Get(ctx, a.Pool, id, window)
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"latency": map[string]any{
+			"series":  series,
+			"summary": summary,
+		},
+		"uptime": up,
 	})
 }
 
@@ -196,27 +241,6 @@ func incidentsFor(p models.Project) int {
 	default:
 		return 0
 	}
-}
-
-func p95Latency(snap []models.MetricFrame) int {
-	if len(snap) == 0 {
-		return 0
-	}
-	vals := make([]float64, len(snap))
-	for i, f := range snap {
-		vals[i] = f.LatencyMs
-	}
-	// quick insertion sort (n <= 300)
-	for i := 1; i < len(vals); i++ {
-		for j := i; j > 0 && vals[j-1] > vals[j]; j-- {
-			vals[j-1], vals[j] = vals[j], vals[j-1]
-		}
-	}
-	idx := int(float64(len(vals)) * 0.95)
-	if idx >= len(vals) {
-		idx = len(vals) - 1
-	}
-	return int(vals[idx])
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {

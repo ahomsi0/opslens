@@ -123,6 +123,78 @@ func GetMany(ctx context.Context, pool *pgxpool.Pool, ids []uuid.UUID, window ti
 	return out, nil
 }
 
+// Point is one bucket in a latency time series.
+type Point struct {
+	Ts       time.Time `json:"ts"`
+	P50      int       `json:"p50"`
+	P95      int       `json:"p95"`
+	Count    int       `json:"count"`
+	Failures int       `json:"failures"`
+}
+
+// TimeSeries returns latency stats bucketed over `window`, one Point per
+// `bucket` interval (default 5 minutes).
+func TimeSeries(ctx context.Context, pool *pgxpool.Pool, projectID uuid.UUID, window, bucket time.Duration) ([]Point, error) {
+	if bucket <= 0 {
+		bucket = 5 * time.Minute
+	}
+	bucketSec := int(bucket.Seconds())
+
+	rows, err := pool.Query(ctx, `
+		SELECT
+		    to_timestamp(floor(extract(epoch FROM checked_at) / $3) * $3) AS bucket,
+		    percentile_disc(0.5)  WITHIN GROUP (ORDER BY latency_ms)::int AS p50,
+		    percentile_disc(0.95) WITHIN GROUP (ORDER BY latency_ms)::int AS p95,
+		    count(*)::int AS total,
+		    count(*) FILTER (WHERE NOT ok)::int AS failures
+		FROM uptime_checks
+		WHERE project_id = $1
+		  AND checked_at > now() - $2::interval
+		GROUP BY bucket
+		ORDER BY bucket ASC
+	`, projectID, intervalString(window), bucketSec)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := make([]Point, 0)
+	for rows.Next() {
+		var p Point
+		if err := rows.Scan(&p.Ts, &p.P50, &p.P95, &p.Count, &p.Failures); err != nil {
+			return nil, err
+		}
+		out = append(out, p)
+	}
+	return out, rows.Err()
+}
+
+// LatencySummary is a snapshot for the project header card.
+type LatencySummary struct {
+	P50 int `json:"p50"`
+	P95 int `json:"p95"`
+	P99 int `json:"p99"`
+}
+
+// LatencyNow returns p50/p95/p99 across successful probes in the window.
+func LatencyNow(ctx context.Context, pool *pgxpool.Pool, projectID uuid.UUID, window time.Duration) (*LatencySummary, error) {
+	var s LatencySummary
+	err := pool.QueryRow(ctx, `
+		SELECT
+		    coalesce(percentile_disc(0.5)  WITHIN GROUP (ORDER BY latency_ms)::int, 0),
+		    coalesce(percentile_disc(0.95) WITHIN GROUP (ORDER BY latency_ms)::int, 0),
+		    coalesce(percentile_disc(0.99) WITHIN GROUP (ORDER BY latency_ms)::int, 0)
+		FROM uptime_checks
+		WHERE project_id = $1
+		  AND checked_at > now() - $2::interval
+		  AND ok = true
+	`, projectID, intervalString(window)).Scan(&s.P50, &s.P95, &s.P99)
+	if err != nil {
+		return nil, err
+	}
+	return &s, nil
+}
+
 // Postgres interval string. We accept a duration so callers can pass
 // '30 days', '24 hours', etc.
 func intervalString(d time.Duration) string {
