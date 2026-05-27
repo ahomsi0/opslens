@@ -6,6 +6,20 @@ export function formatPercent(n: number, digits = 2) {
   return `${n.toFixed(digits)}%`;
 }
 
+/**
+ * Formats uptime. -1 means "no checks yet" → returns '—'. Otherwise
+ * returns the % and a short qualifier when the window is shorter than
+ * the full 30 days (e.g. "99.50% · 4h").
+ */
+export function formatUptime(pct: number, windowH?: number) {
+  if (pct < 0) return "—";
+  const fullWindow = 30 * 24;
+  if (windowH && windowH < fullWindow) {
+    return `${pct.toFixed(2)}% · ${windowH}h`;
+  }
+  return `${pct.toFixed(2)}%`;
+}
+
 export function formatMs(n: number) {
   if (n >= 1000) return `${(n / 1000).toFixed(2)}s`;
   return `${Math.round(n)}ms`;

@@ -25,11 +25,12 @@ type Project struct {
 
 type ProjectSummary struct {
 	Project
-	UptimePct       float64       `json:"uptimePct"`
-	LatencyP95Ms    int           `json:"latencyP95Ms"`
-	LastDeployment  *Deployment   `json:"lastDeployment,omitempty"`
-	LatencySpark    []int         `json:"latencySpark"`
-	ActiveIncidents int           `json:"activeIncidents"`
+	UptimePct       float64     `json:"uptimePct"`
+	UptimeWindowH   int         `json:"uptimeWindowH,omitempty"` // hours covered by the % (≤ 720 for 30d)
+	LatencyP95Ms    int         `json:"latencyP95Ms"`
+	LastDeployment  *Deployment `json:"lastDeployment,omitempty"`
+	LatencySpark    []int       `json:"latencySpark"`
+	ActiveIncidents int         `json:"activeIncidents"`
 }
 
 type Deployment struct {

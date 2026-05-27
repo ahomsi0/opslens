@@ -2,7 +2,7 @@ import { Github, Globe, MapPin } from "lucide-react";
 import { StatusDot } from "./status-dot";
 import { EnvChip } from "./env-chip";
 import { ProviderIcon, providerLabels } from "./provider-icon";
-import { formatMs, formatPercent } from "@/lib/format";
+import { formatMs, formatUptime } from "@/lib/format";
 import type { ProjectSummary } from "@/lib/types";
 
 export function ProjectHeader({ project }: { project: ProjectSummary }) {
@@ -42,13 +42,15 @@ export function ProjectHeader({ project }: { project: ProjectSummary }) {
         <Stat label="Status" value={statusLabel(project.status)} tone={project.status} />
         <Stat
           label="Uptime · 30d"
-          value={formatPercent(project.uptimePct, 2)}
+          value={formatUptime(project.uptimePct, project.uptimeWindowH)}
           tone={
-            project.uptimePct > 99.5
-              ? "healthy"
-              : project.uptimePct > 98
-                ? "degraded"
-                : "down"
+            project.uptimePct < 0
+              ? undefined
+              : project.uptimePct > 99.5
+                ? "healthy"
+                : project.uptimePct > 98
+                  ? "degraded"
+                  : "down"
           }
         />
         <Stat

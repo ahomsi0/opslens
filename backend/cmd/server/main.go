@@ -25,6 +25,7 @@ import (
 	"github.com/ahomsi0/opslens/backend/internal/migrations"
 	"github.com/ahomsi0/opslens/backend/internal/providers"
 	"github.com/ahomsi0/opslens/backend/internal/seed"
+	"github.com/ahomsi0/opslens/backend/internal/uptime"
 	"github.com/ahomsi0/opslens/backend/internal/ws"
 )
 
@@ -72,6 +73,10 @@ func main() {
 	// Background poller — re-syncs every connected provider every 30s.
 	poller := providers.NewPoller(pool, sealer)
 	go poller.Run(ctx)
+
+	// Uptime prober — pings each project's domain on a 60s tick and records
+	// the result. Read at request time via uptime.Get / uptime.GetMany.
+	go uptime.NewProber(pool).Run(ctx)
 
 	a := &api.API{Pool: pool, Hub: hub}
 	wsh := &ws.Handler{Hub: hub, Pool: pool}

@@ -9,7 +9,7 @@ import { Sparkline } from "@/components/charts/sparkline";
 import { StatusDot } from "./status-dot";
 import { EnvChip } from "./env-chip";
 import { ProviderIcon, providerLabels } from "./provider-icon";
-import { formatMs, formatPercent, shortSha, timeAgo } from "@/lib/format";
+import { formatMs, formatUptime, shortSha, timeAgo } from "@/lib/format";
 import type { ProjectSummary } from "@/lib/types";
 
 export function ProjectCard({
@@ -60,13 +60,15 @@ export function ProjectCard({
           <div className="mt-5 grid grid-cols-2 gap-4">
             <Metric
               label="Uptime · 30d"
-              value={formatPercent(project.uptimePct, 2)}
+              value={formatUptime(project.uptimePct, project.uptimeWindowH)}
               tone={
-                project.uptimePct > 99.5
-                  ? "good"
-                  : project.uptimePct > 98
-                    ? "warn"
-                    : "bad"
+                project.uptimePct < 0
+                  ? undefined
+                  : project.uptimePct > 99.5
+                    ? "good"
+                    : project.uptimePct > 98
+                      ? "warn"
+                      : "bad"
               }
             />
             <Metric

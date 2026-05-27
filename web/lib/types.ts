@@ -56,7 +56,10 @@ export interface Deployment {
 }
 
 export interface ProjectSummary extends Project {
+  /** -1 means we have no checks yet — show '—'. Otherwise 0..100. */
   uptimePct: number;
+  /** Hours of data covered. May be < 720 (30d) on fresh deploys. */
+  uptimeWindowH?: number;
   latencyP95Ms: number;
   lastDeployment?: Deployment | null;
   latencySpark: number[];

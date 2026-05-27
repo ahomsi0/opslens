@@ -21,7 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 import {
   formatMs,
-  formatPercent,
+  formatUptime,
   shortSha,
   timeAgo,
 } from "@/lib/format";
@@ -315,14 +315,16 @@ export function ProjectTable({ projects }: { projects: ProjectSummary[] }) {
                     <td
                       className={cn(
                         "px-4 py-3 text-right font-mono tabular-nums",
-                        p.uptimePct > 99.5
-                          ? "text-[var(--color-fg)]"
-                          : p.uptimePct > 98
-                            ? "text-[oklch(0.88_0.14_80)]"
-                            : "text-[oklch(0.82_0.18_25)]",
+                        p.uptimePct < 0
+                          ? "text-[var(--color-fg-subtle)]"
+                          : p.uptimePct > 99.5
+                            ? "text-[var(--color-fg)]"
+                            : p.uptimePct > 98
+                              ? "text-[oklch(0.88_0.14_80)]"
+                              : "text-[oklch(0.82_0.18_25)]",
                       )}
                     >
-                      {formatPercent(p.uptimePct, 2)}
+                      {formatUptime(p.uptimePct, p.uptimeWindowH)}
                     </td>
                     <td className="px-4 py-3 text-right font-mono tabular-nums text-[var(--color-fg-muted)]">
                       {p.latencyP95Ms ? formatMs(p.latencyP95Ms) : "—"}

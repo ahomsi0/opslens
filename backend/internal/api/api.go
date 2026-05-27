@@ -16,7 +16,11 @@ import (
 	"github.com/ahomsi0/opslens/backend/internal/db"
 	"github.com/ahomsi0/opslens/backend/internal/metrics"
 	"github.com/ahomsi0/opslens/backend/internal/models"
+	"github.com/ahomsi0/opslens/backend/internal/uptime"
 )
+
+// Window we report uptime over. 30 days is the dashboard's standard window.
+const uptimeWindow = 30 * 24 * time.Hour
 
 type API struct {
 	Pool *pgxpool.Pool
@@ -35,10 +39,23 @@ func (a *API) ListProjects(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	// Real uptime: one batched query for all the user's projects.
+	ids := make([]uuid.UUID, 0, len(projects))
+	for _, p := range projects {
+		ids = append(ids, p.ID)
+	}
+	upMap, _ := uptime.GetMany(ctx, a.Pool, ids, uptimeWindow)
+
 	out := make([]models.ProjectSummary, 0, len(projects))
 	for _, p := range projects {
 		s := models.ProjectSummary{Project: p}
-		s.UptimePct = uptimeFor(p)
+		if st, ok := upMap[p.ID]; ok && st.HasData {
+			s.UptimePct = st.Percent
+			s.UptimeWindowH = st.WindowH
+		} else {
+			s.UptimePct = -1 // signal "no data yet" — frontend shows '—'
+		}
 		s.ActiveIncidents = incidentsFor(p)
 
 		// p95 latency + sparkline from live buffer
@@ -85,7 +102,12 @@ func (a *API) GetProject(w http.ResponseWriter, r *http.Request) {
 	deps, _ := db.ListDeployments(ctx, a.Pool, id, 10)
 
 	summary := models.ProjectSummary{Project: *p}
-	summary.UptimePct = uptimeFor(*p)
+	if st, _ := uptime.Get(ctx, a.Pool, id, uptimeWindow); st != nil && st.HasData {
+		summary.UptimePct = st.Percent
+		summary.UptimeWindowH = st.WindowH
+	} else {
+		summary.UptimePct = -1
+	}
 	summary.ActiveIncidents = incidentsFor(*p)
 	snap := a.Hub.Snapshot(id)
 	summary.LatencyP95Ms = p95Latency(snap)
@@ -164,19 +186,6 @@ func (a *API) ListLogs(w http.ResponseWriter, r *http.Request) {
 }
 
 // -- helpers --
-
-func uptimeFor(p models.Project) float64 {
-	switch p.Status {
-	case "healthy":
-		return 99.94
-	case "degraded":
-		return 98.21
-	case "down":
-		return 91.07
-	default:
-		return 99.0
-	}
-}
 
 func incidentsFor(p models.Project) int {
 	switch p.Status {

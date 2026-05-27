@@ -21,10 +21,11 @@ export function StatRow({ projects }: { projects: ProjectSummary[] }) {
   const medianP95 = p95s.length
     ? p95s[Math.floor(p95s.length / 2)]
     : 0;
-  const uptimes = projects.map((p) => p.uptimePct);
+  // Only include projects with real uptime data in the fleet average.
+  const uptimes = projects.map((p) => p.uptimePct).filter((u) => u >= 0);
   const fleetUptime = uptimes.length
     ? uptimes.reduce((a, b) => a + b, 0) / uptimes.length
-    : 100;
+    : -1;
 
   const cards = [
     {
@@ -84,7 +85,7 @@ export function StatRow({ projects }: { projects: ProjectSummary[] }) {
           </div>
           {i === 1 && (
             <div className="mt-1 text-[10px] text-[var(--color-fg-subtle)] font-mono">
-              fleet {formatPercent(fleetUptime, 2)}
+              fleet {fleetUptime < 0 ? "—" : formatPercent(fleetUptime, 2)}
             </div>
           )}
         </div>
