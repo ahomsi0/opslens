@@ -19,6 +19,7 @@ import (
 	"github.com/ahomsi0/opslens/backend/internal/providers/railway"
 	"github.com/ahomsi0/opslens/backend/internal/providers/render"
 	"github.com/ahomsi0/opslens/backend/internal/providers/supabase"
+	"github.com/ahomsi0/opslens/backend/internal/providers/uptimerobot"
 	"github.com/ahomsi0/opslens/backend/internal/providers/vercel"
 )
 
@@ -112,11 +113,12 @@ func (p *Poller) syncOne(ctx context.Context, c db.ConnectionWithToken) {
 
 	type syncFn func(context.Context, *pgxpool.Pool, uuid.UUID, string) (int, error)
 	dispatch := map[string]syncFn{
-		"vercel":   vercel.Sync,
-		"render":   render.Sync,
-		"neon":     neon.Sync,
-		"supabase": supabase.Sync,
-		"railway":  railway.Sync,
+		"vercel":      vercel.Sync,
+		"render":      render.Sync,
+		"neon":        neon.Sync,
+		"supabase":    supabase.Sync,
+		"railway":     railway.Sync,
+		"uptimerobot": uptimerobot.Sync,
 	}
 	fn, ok := dispatch[c.Provider]
 	if !ok {

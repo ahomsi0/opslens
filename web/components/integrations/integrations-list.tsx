@@ -12,6 +12,7 @@ import { ConnectNeonDialog } from "./connect-neon-dialog";
 import { ConnectSupabaseDialog } from "./connect-supabase-dialog";
 import { ConnectRailwayDialog } from "./connect-railway-dialog";
 import { ConnectDockerDialog } from "./connect-docker-dialog";
+import { ConnectUptimeRobotDialog } from "./connect-uptimerobot-dialog";
 import { deleteConnection } from "@/lib/api";
 import { timeAgo } from "@/lib/format";
 import type { Connection, Provider } from "@/lib/types";
@@ -46,6 +47,11 @@ const catalog: ProviderInfo[] = [
     provider: "supabase",
     description:
       "Pull projects from the Supabase Management API: name, region, health status. No deployment history.",
+  },
+  {
+    provider: "uptimerobot",
+    description:
+      "Pull every monitor on your UptimeRobot account with their current up/down status. Useful if you already track external services there.",
   },
   {
     provider: "docker",
@@ -200,6 +206,10 @@ export function IntegrationsList({
       <ConnectDockerDialog
         open={openDialog === "docker"}
         onOpenChange={(v) => setOpenDialog(v ? "docker" : null)}
+      />
+      <ConnectUptimeRobotDialog
+        open={openDialog === "uptimerobot"}
+        onOpenChange={(v) => setOpenDialog(v ? "uptimerobot" : null)}
       />
     </div>
   );

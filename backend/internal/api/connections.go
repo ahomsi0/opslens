@@ -20,6 +20,7 @@ import (
 	"github.com/ahomsi0/opslens/backend/internal/providers/railway"
 	"github.com/ahomsi0/opslens/backend/internal/providers/render"
 	"github.com/ahomsi0/opslens/backend/internal/providers/supabase"
+	"github.com/ahomsi0/opslens/backend/internal/providers/uptimerobot"
 	"github.com/ahomsi0/opslens/backend/internal/providers/vercel"
 )
 
@@ -180,6 +181,23 @@ func (a *ConnectionAPI) Create(w http.ResponseWriter, r *http.Request) {
 		if accountLabel == "" {
 			accountLabel = user.Email
 		}
+		tokenToStore = req.Token
+
+	case "uptimerobot":
+		if req.Token == "" {
+			writeErr(w, http.StatusBadRequest, "token is required")
+			return
+		}
+		acct, err := uptimerobot.NewClient(req.Token).VerifyToken(ctx)
+		if err != nil {
+			if errors.Is(err, uptimerobot.ErrInvalidToken) {
+				writeErr(w, http.StatusUnauthorized, "UptimeRobot rejected the API key")
+				return
+			}
+			writeErr(w, http.StatusBadGateway, "could not reach UptimeRobot: "+err.Error())
+			return
+		}
+		accountLabel = acct.Email
 		tokenToStore = req.Token
 
 	case "docker":

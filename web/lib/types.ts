@@ -5,7 +5,8 @@ export type Provider =
   | "railway"
   | "supabase"
   | "neon"
-  | "docker";
+  | "docker"
+  | "uptimerobot";
 export type Environment = "production" | "staging" | "preview" | "development";
 export type DeploymentStatus =
   | "success"

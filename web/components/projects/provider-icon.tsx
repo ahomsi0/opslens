@@ -10,6 +10,7 @@ const colors: Record<Provider, string> = {
   supabase: "text-[#3ECF8E]",
   neon: "text-[#00E699]",
   docker: "text-[#2496ED]",
+  uptimerobot: "text-[#1A9C40]",
 };
 
 const labels: Record<Provider, string> = {
@@ -19,6 +20,7 @@ const labels: Record<Provider, string> = {
   supabase: "Supabase",
   neon: "Neon",
   docker: "Docker",
+  uptimerobot: "UptimeRobot",
 };
 
 export function ProviderIcon({
@@ -135,6 +137,26 @@ function Mark({
             d="M7 17V7h2.4l5.2 7V7H17v10h-2.4l-5.2-7v7H7Z"
             fill="#0A0B0F"
           />
+        </svg>
+      );
+
+    // UptimeRobot — green rounded square with a stylized robot face: two
+    // square eyes + a flat mouth. Their actual brand mark is a chunky little
+    // robot; at favicon size this minimal version reads cleanly.
+    case "uptimerobot":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+          <rect
+            x="2"
+            y="2"
+            width="20"
+            height="20"
+            rx="5"
+            fill="currentColor"
+          />
+          <rect x="7" y="8.5" width="3" height="3" rx="0.6" fill="#0A0B0F" />
+          <rect x="14" y="8.5" width="3" height="3" rx="0.6" fill="#0A0B0F" />
+          <rect x="8" y="15" width="8" height="1.6" rx="0.8" fill="#0A0B0F" />
         </svg>
       );
 
