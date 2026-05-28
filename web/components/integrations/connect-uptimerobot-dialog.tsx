@@ -110,9 +110,11 @@ export function ConnectUptimeRobotDialog({
               disabled={busy}
             />
             <p className="mt-1.5 text-[11px] text-[var(--color-fg-subtle)]">
-              Use the <span className="font-mono">Main API Key</span> (starts
-              with <span className="font-mono">u</span>). Read-only keys also
-              work. Stored encrypted at rest.
+              Recommended: the <span className="font-mono">Read-Only Main API
+              Key</span> — same monitor coverage as the Main key, but we
+              physically can&apos;t pause or delete anything. Monitor-specific
+              keys won&apos;t work here (they can&apos;t list the account, only
+              one monitor each). Stored encrypted at rest.
             </p>
           </div>
 
